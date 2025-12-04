@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.env
+.env.prod
+napcat/qq/*
+!napcat/qq/.keep
+napcat/logs/
+dist/
+build/
+*.egg-info/
