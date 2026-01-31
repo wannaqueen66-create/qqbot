@@ -13,6 +13,16 @@ All business logic (chat/memory/tools/schedules) lives in OpenClaw.
 
 ---
 
+## Table of Contents | 目录
+- [Architecture | 架构](#architecture--架构)
+- [Requirements | 环境要求](#requirements--环境要求)
+- [Fresh VPS Quick Start (Debian) | 全新 VPS 快速开始](#fresh-vps-quick-start-debian--全新-vps-快速开始)
+- [Install OpenClaw (Required) | 安装 OpenClaw（必需）](#install-openclaw-required--安装-openclaw必需)
+- [Install & Run (NapCat + qqbot) | 安装并运行（NapCat + qqbot）](#install--run-napcat--qqbot--安装并运行napcat--qqbot)
+- [Deployment Checklist | 部署检查清单](#deployment-checklist-must-pass--部署检查清单必须通过)
+
+---
+
 ## Architecture | 架构
 ```
 QQ (NapCat OneBot) → NoneBot → OpenClaw Gateway → Response → QQ
