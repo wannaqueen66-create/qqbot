@@ -47,6 +47,9 @@ bash deploy.sh
 ```
 Log file: `run.log`
 
+## ✅ NapCat Setup (Recommended)
+See `NAPCAT_SETUP.md` for WebUI login + Reverse WS setup.
+
 ## ✅ OpenClaw Cron (recommended)
 All scheduling should be configured in OpenClaw. See:
 - `DEPLOY_OPENCLAW.md`
