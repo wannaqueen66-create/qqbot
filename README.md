@@ -28,6 +28,14 @@ sudo apt-get install -y docker.io docker-compose-plugin curl netcat-openbsd
 sudo systemctl enable --now docker
 ```
 
+## ✅ Install OpenClaw (Required)
+If OpenClaw is not installed, run:
+```bash
+npm install -g openclaw
+openclaw gateway start
+openclaw status
+```
+
 ## Setup
 
 ### 1) Clone
