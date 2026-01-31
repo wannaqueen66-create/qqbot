@@ -24,17 +24,19 @@ QQ (NapCat OneBot) → NoneBot → OpenClaw Gateway → Response → QQ
 ## ✅ Fresh VPS Quick Start (Debian)
 ```bash
 sudo apt-get update
-sudo apt-get install -y docker.io docker-compose-plugin curl netcat-openbsd
+sudo apt-get install -y docker.io docker-compose-plugin curl netcat-openbsd npm
 sudo systemctl enable --now docker
 ```
 
 ## ✅ Install OpenClaw (Required)
-If OpenClaw is not installed, run:
 ```bash
 npm install -g openclaw
 openclaw gateway start
 openclaw status
 ```
+
+## ✅ Install NapCat (Required)
+See `NAPCAT_SETUP.md` for full WebUI + Reverse WS steps.
 
 ## Setup
 
@@ -69,6 +71,26 @@ Logs:
 ```bash
 docker compose logs -f qqbot
 ```
+
+---
+
+## ✅ Deployment Checklist (Must Pass)
+
+### OpenClaw
+- `openclaw status` shows Gateway running
+- Gateway URL reachable at `ws://127.0.0.1:18789`
+
+### NapCat
+- WebUI 登录成功
+- Reverse WS 已配置：`ws://<qqbot_host>:8080/onebot/v11/ws`
+- 机器人能收到/发送 QQ 消息
+
+### QQ Bot (this repo)
+- `.env` 已填写
+- `bash healthcheck.sh` 全部通过
+- `docker compose ps` 显示 qqbot running
+
+---
 
 ## NapCat Setup
 See `NAPCAT_SETUP.md`.
