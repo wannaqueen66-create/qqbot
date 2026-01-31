@@ -10,14 +10,14 @@ adapters = [
     { name = "OneBot V11", module = "nonebot.adapters.onebot.v11" }
 ]
 plugins = []
-plugin_dirs = ["src/plugins"]
-builtin_plugins = ["echo"]
+plugin_dirs = ["src/plugins/openclaw_bridge"]
+builtin_plugins = []
 
 [tool.poetry]
 name = "qqbot"
 version = "0.1.0"
 description = "QQ Robot for personal assistance"
-authors = ["Your Name <you@example.com>"]
+authors = ["Lucas <Lucas3451@qq.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
