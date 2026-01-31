@@ -1,11 +1,12 @@
 # qqbot (OpenClaw Bridge)
 
-Phase 1 architecture: **NoneBot only handles QQ I/O**, all messages are forwarded to **OpenClaw** for reasoning and response generation.
+Phase 1–2 architecture: **NoneBot only handles QQ I/O**, all messages are forwarded to **OpenClaw** for reasoning and response generation. Legacy features are intentionally bypassed in Phase 2.
 
-## What it does (Phase 1)
+## What it does (Phase 2)
 - Receive QQ messages via OneBot V11 (NapCat)
 - Forward to OpenClaw Gateway
 - Return OpenClaw responses back to QQ
+- `/help` / `/summary` are mapped to OpenClaw intents
 
 ## Configuration
 Set these environment variables:
@@ -26,5 +27,5 @@ python bot.py
 ```
 
 ## Notes
-- This branch only includes the OpenClaw bridge plugin.
-- Original features in `main` are intentionally bypassed in Phase 1.
+- Phase 2 disables legacy plugin behaviors (chat/memory/stats/rss/etc.).
+- Phase 3 will migrate schedulers and RSS into OpenClaw.

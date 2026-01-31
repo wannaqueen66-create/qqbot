@@ -13,6 +13,13 @@ OPENCLAW_TOKEN = os.getenv("OPENCLAW_TOKEN")
 OPENCLAW_SESSION_PREFIX = os.getenv("OPENCLAW_SESSION_PREFIX", "qq")
 OPENCLAW_TIMEOUT_SEC = int(os.getenv("OPENCLAW_TIMEOUT_SEC", "60"))
 
+COMMAND_MAP = {
+    "/help": "显示可用功能与使用方式",
+    "帮助": "显示可用功能与使用方式",
+    "/summary": "总结最近对话要点",
+    "总结": "总结最近对话要点",
+}
+
 
 def _load_token_from_openclaw_config() -> Optional[str]:
     try:
@@ -35,6 +42,13 @@ def _extract_text(message_payload: dict) -> str:
     return str(message_payload) if message_payload else ""
 
 
+def _normalize_message(text: str) -> str:
+    stripped = text.strip()
+    if stripped in COMMAND_MAP:
+        return COMMAND_MAP[stripped]
+    return stripped
+
+
 async def openclaw_chat(message: str, session_key: str) -> str:
     token = OPENCLAW_TOKEN or _load_token_from_openclaw_config()
     if not token:
@@ -46,7 +60,6 @@ async def openclaw_chat(message: str, session_key: str) -> str:
 
     async with aiohttp.ClientSession() as session:
         async with session.ws_connect(OPENCLAW_GATEWAY_URL, heartbeat=15) as ws:
-            # Read any pre-connect events (like challenge) but don't block long
             try:
                 await ws.receive(timeout=1)
             except Exception:
@@ -72,7 +85,6 @@ async def openclaw_chat(message: str, session_key: str) -> str:
             }
             await ws.send_json(connect_req)
 
-            # Wait for connect ack
             while True:
                 msg = await ws.receive(timeout=5)
                 if msg.type == aiohttp.WSMsgType.TEXT:
@@ -97,7 +109,6 @@ async def openclaw_chat(message: str, session_key: str) -> str:
             }
             await ws.send_json(chat_req)
 
-            # Wait for chat final
             end_time = asyncio.get_event_loop().time() + timeout
             while True:
                 remaining = end_time - asyncio.get_event_loop().time()
@@ -127,11 +138,13 @@ async def _(bot: Bot, event: Event):
     if not text:
         return
 
+    message = _normalize_message(text)
+
     if event.message_type == "group":
         session_key = f"{OPENCLAW_SESSION_PREFIX}:group:{event.group_id}"
     else:
         session_key = f"{OPENCLAW_SESSION_PREFIX}:user:{event.user_id}"
 
-    reply = await openclaw_chat(text, session_key)
+    reply = await openclaw_chat(message, session_key)
     if reply:
         await bot.send(event, reply)
