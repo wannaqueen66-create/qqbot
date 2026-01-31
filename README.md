@@ -16,9 +16,17 @@ QQ (NapCat OneBot) → NoneBot → OpenClaw Gateway → Response → QQ
 ```
 
 ## Requirements
+- Debian/Ubuntu VPS
 - Python 3.8+
 - OneBot V11 provider (NapCat)
 - OpenClaw Gateway running
+
+## ✅ Fresh VPS Quick Start (Debian)
+
+```bash
+sudo apt-get update
+sudo apt-get install -y python3 python3-pip curl netcat-openbsd
+```
 
 ## Setup
 
@@ -44,7 +52,12 @@ OPENCLAW_TIMEOUT_SEC=60
 python -m pip install -r requirements.txt
 ```
 
-### 4) Run
+### 4) Health Check
+```bash
+bash healthcheck.sh
+```
+
+### 5) Run
 ```bash
 python bot.py
 ```
