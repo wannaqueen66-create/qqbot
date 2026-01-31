@@ -1,5 +1,15 @@
 version: "3.8"
 services:
+  napcat:
+    image: napcat/napcat:latest
+    container_name: napcat
+    restart: unless-stopped
+    ports:
+      - "6099:6099"
+    volumes:
+      - ./napcat/qq:/app/qq
+      - ./napcat/config:/app/config
+
   qqbot:
     build: .
     container_name: qqbot
@@ -10,3 +20,5 @@ services:
       - ./:/app
     ports:
       - "8080:8080"
+    depends_on:
+      - napcat

@@ -18,7 +18,6 @@ QQ (NapCat OneBot) → NoneBot → OpenClaw Gateway → Response → QQ
 ## Requirements
 - Debian/Ubuntu VPS
 - Docker + Docker Compose
-- OneBot V11 provider (NapCat)
 - OpenClaw Gateway running
 
 ## ✅ Fresh VPS Quick Start (Debian)
@@ -35,10 +34,8 @@ openclaw gateway start
 openclaw status
 ```
 
-## ✅ Install NapCat (Required)
-See `NAPCAT_SETUP.md` for full WebUI + Reverse WS steps.
-
-## Setup
+## ✅ Install & Run (NapCat + qqbot)
+This repo ships a **combined docker-compose.yml** with NapCat + qqbot.
 
 ### 1) Clone
 ```bash
@@ -57,19 +54,24 @@ OPENCLAW_TIMEOUT_SEC=60
 
 > If `OPENCLAW_TOKEN` is empty, the bot tries: `/home/wannaqueen66/.openclaw/openclaw.json`
 
-### 3) Health Check
-```bash
-bash healthcheck.sh
-```
-
-### 4) Run (Docker)
+### 3) Start
 ```bash
 docker compose up -d --build
 ```
 
-Logs:
+### 4) Login NapCat
+Open WebUI:
+```
+http://<server-ip>:6099/webui
+```
+Login and configure Reverse WS:
+```
+ws://qqbot:8080/onebot/v11/ws
+```
+
+### 5) Health Check
 ```bash
-docker compose logs -f qqbot
+bash healthcheck.sh
 ```
 
 ---
@@ -82,18 +84,11 @@ docker compose logs -f qqbot
 
 ### NapCat
 - WebUI 登录成功
-- Reverse WS 已配置：`ws://<qqbot_host>:8080/onebot/v11/ws`
+- Reverse WS 已配置：`ws://qqbot:8080/onebot/v11/ws`
 - 机器人能收到/发送 QQ 消息
 
 ### QQ Bot (this repo)
 - `.env` 已填写
 - `bash healthcheck.sh` 全部通过
-- `docker compose ps` 显示 qqbot running
+- `docker compose ps` 显示 napcat/qqbot running
 
----
-
-## NapCat Setup
-See `NAPCAT_SETUP.md`.
-
-## OpenClaw Cron
-See `DEPLOY_OPENCLAW.md`.
