@@ -17,15 +17,15 @@ QQ (NapCat OneBot) → NoneBot → OpenClaw Gateway → Response → QQ
 
 ## Requirements
 - Debian/Ubuntu VPS
-- Python 3.8+
+- Docker + Docker Compose
 - OneBot V11 provider (NapCat)
 - OpenClaw Gateway running
 
 ## ✅ Fresh VPS Quick Start (Debian)
-
 ```bash
 sudo apt-get update
-sudo apt-get install -y python3 python3-pip curl netcat-openbsd
+sudo apt-get install -y docker.io docker-compose-plugin curl netcat-openbsd
+sudo systemctl enable --now docker
 ```
 
 ## Setup
@@ -47,26 +47,20 @@ OPENCLAW_TIMEOUT_SEC=60
 
 > If `OPENCLAW_TOKEN` is empty, the bot tries: `/home/wannaqueen66/.openclaw/openclaw.json`
 
-### 3) Install
-```bash
-python -m pip install -r requirements.txt
-```
-
-### 4) Health Check
+### 3) Health Check
 ```bash
 bash healthcheck.sh
 ```
 
-### 5) Run
+### 4) Run (Docker)
 ```bash
-python bot.py
+docker compose up -d --build
 ```
 
-## One-click
+Logs:
 ```bash
-bash deploy.sh
+docker compose logs -f qqbot
 ```
-Logs: `run.log`
 
 ## NapCat Setup
 See `NAPCAT_SETUP.md`.
