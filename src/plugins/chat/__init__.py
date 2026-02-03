@@ -52,6 +52,7 @@ async def handle_chat(event: Union[GroupMessageEvent, PrivateMessageEvent]):
         # Import utilities
         from src.utils.conversation_memory import conversation_memory
         from src.utils.openai_client import openai_client
+        from src.utils.image_utils import image_file_to_data_url
         from src.utils.message_parser import message_parser
         from src.utils.media_downloader import media_downloader
         
@@ -61,11 +62,47 @@ async def handle_chat(event: Union[GroupMessageEvent, PrivateMessageEvent]):
         except Exception as e:
             logger.error(f"Message parsing failed: {e}")
             await chat.finish("消息解析失败，请重试。")
-            return
-
-        # OpenAI-compatible mode (via Antigravity-Manager /v1): currently text-only
+        # Media handling (OpenAI-compatible):
+        # - Images: use vision endpoint
+        # - Audio/Video: not supported yet
         if getattr(parsed, "has_media", False):
-            await chat.finish("⚠️ 当前版本暂不支持图片/语音/视频输入，请发送纯文本。")
+            if getattr(parsed, "audios", None) or getattr(parsed, "videos", None):
+                await chat.finish("⚠️ 暂不支持语音/视频输入（后续可加本地 Whisper/TTS）。")
+                return
+            if getattr(parsed, "images", None):
+                # Build vision prompt
+                max_images = int(os.getenv("MAX_IMAGE_COUNT", "3"))
+                max_px = int(os.getenv("IMAGE_MAX_PX", "1024"))
+                quality = int(os.getenv("IMAGE_JPEG_QUALITY", "85"))
+
+                image_urls = []
+                for img in parsed.images[:max_images]:
+                    if not img.url:
+                        continue
+                    file_path = await media_downloader.download_image(img.url, filename_hint=img.file)
+                    image_urls.append(image_file_to_data_url(file_path, max_px=max_px, quality=quality))
+
+                model_for_vision = os.getenv("MODEL_CHAT_LONG", os.getenv("MODEL_CHAT_SHORT", "auto"))
+                reply = await openai_client.chat_completions_vision(
+                    text_prompt=parsed.text or "请描述这张图片",
+                    image_data_urls=image_urls,
+                    model=model_for_vision,
+                )
+
+                from src.utils.text_formatter import markdown_to_plain_text
+                reply = markdown_to_plain_text(reply)
+
+                from src.utils.message_forwarder import send_message_smart
+                threshold = int(os.getenv("FORWARD_THRESHOLD", "100"))
+
+                try:
+                    bot = get_bot()
+                    await send_message_smart(bot=bot, message=reply, event=event, threshold=threshold)
+                except Exception:
+                    await chat.send(reply)
+
+                await chat.finish()
+
             return
 
         # 检查是否为命令消息（避免与命令处理器冲突）

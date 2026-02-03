@@ -136,6 +136,54 @@ class OpenAIClient:
         if last_status is not None:
             return f"[Error] API 调用失败（HTTP {last_status}）"
         return "[Error] 无法连接到后端 API"
+
+
+    async def chat_completions_vision(self, text_prompt: str, image_data_urls: list[str], model: str) -> str:
+        """Vision chat via OpenAI-compatible /v1/chat/completions.
+
+        image_data_urls: list of data:image/...;base64,...
+        """
+        if not self.base_url:
+            return "[Error] OPENAI_BASE_URL 未配置"
+        if not self.api_key:
+            return "[Error] OPENAI_API_KEY 未配置"
+
+        content = [{"type": "text", "text": text_prompt or "请描述这张图片"}]
+        for u in image_data_urls:
+            content.append({"type": "image_url", "image_url": {"url": u}})
+
+        messages = [{"role": "user", "content": content}]
+
+        url = f"{self.base_url}/chat/completions"
+        payload = {
+            "model": model,
+            "messages": messages,
+            "temperature": 0.7,
+        }
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+
+        timeout = aiohttp.ClientTimeout(total=self.timeout_sec)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.post(url, headers=headers, json=payload) as resp:
+                body = await resp.text()
+                if resp.status >= 400:
+                    logger.error(f"OpenAI vision API error: status={resp.status} body={body[:500]}")
+                    if resp.status == 401:
+                        return "[Error] 后端鉴权失败（401）"
+                    if resp.status == 429:
+                        return "[Error] 后端限流（429），请稍后再试"
+                    return f"[Error] API 调用失败（HTTP {resp.status}）"
+                data = json.loads(body)
+
+        try:
+            return (data["choices"][0]["message"]["content"] or "").strip()
+        except Exception:
+            logger.error(f"OpenAI vision API unexpected response: {str(data)[:500]}")
+            return "[Error] API 返回缺少 choices/message"
+
     async def generate_content(self, model: str, prompt: str, task_type: str = "chat", auto_select: bool = True, history=None, has_media: bool = False):
         """Gemini-like interface used by existing plugins.
 
@@ -160,6 +208,48 @@ class OpenAIClient:
             logger.info(f"[model_router] choose model={chosen_model} reason={choice.reason}")
 
         return await self.chat_completions(messages, model=chosen_model)
+
+
+    async def image_generations(self, prompt: str, model: str) -> str:
+        """Generate image via OpenAI-compatible /v1/images/generations.
+
+        Returns base64 string (no prefix) suitable for OneBot base64:// sending.
+        """
+        if not self.base_url:
+            raise RuntimeError('OPENAI_BASE_URL empty')
+
+        url = f"{self.base_url}/images/generations"
+        size = os.getenv('OPENAI_IMAGE_SIZE', '1024x1024')
+        payload = {
+            'model': model,
+            'prompt': prompt,
+            'n': 1,
+            'size': size,
+            # request base64 if supported
+            'response_format': 'b64_json',
+        }
+        headers = {
+            'Authorization': f"Bearer {self.api_key}",
+            'Content-Type': 'application/json',
+        }
+        timeout = aiohttp.ClientTimeout(total=self.timeout_sec)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.post(url, headers=headers, json=payload) as resp:
+                body = await resp.text()
+                if resp.status >= 400:
+                    logger.error(f"OpenAI image API error: status={resp.status} body={body[:500]}")
+                    raise RuntimeError(f"image api failed: HTTP {resp.status}")
+                data = json.loads(body)
+        try:
+            item = (data.get('data') or [])[0]
+            if 'b64_json' in item and item['b64_json']:
+                return item['b64_json']
+            # fallback if url returned
+            if 'url' in item and item['url']:
+                return item['url']
+        except Exception:
+            logger.error(f"OpenAI image API unexpected response: {str(data)[:500]}")
+        raise RuntimeError('image api missing data')
 
 
 openai_client = OpenAIClient()

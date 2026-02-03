@@ -58,6 +58,7 @@
   - Manual: `/summary` (group only)
   - Scheduled: 12:00 / 18:00 / 00:00 / 06:00 (Asia/Shanghai)
 - Status: `/status` (admin-only, private chat only)
+- Image: `/draw <prompt>` generates an image
 
 ### Architecture
 
@@ -140,6 +141,14 @@ OPENAI_MAX_INPUT_CHARS=4000
 # Forwarding
 FORWARD_THRESHOLD=100
 BOT_NICKNAME=AI 助手
+
+# Image input limits
+MAX_IMAGE_COUNT=3
+IMAGE_MAX_PX=1024
+IMAGE_JPEG_QUALITY=85
+
+# Image generation
+OPENAI_IMAGE_SIZE=1024x1024
 
 # Scheduled push targets
 TARGET_GROUPS=[]
@@ -249,6 +258,7 @@ OPENAI_RETRY_BASE_SEC=0.6
   - 手动：`/summary`（仅群聊）
   - 定时：12:00 / 18:00 / 00:00 / 06:00（上海时区）
 - 状态：`/status`（仅管理员私聊可用）
+- 图片生成：`/draw <描述>`
 
 ### 架构
 
@@ -325,6 +335,11 @@ OPENAI_MAX_INPUT_CHARS=4000
 
 FORWARD_THRESHOLD=100
 BOT_NICKNAME=AI 助手
+
+MAX_IMAGE_COUNT=3
+IMAGE_MAX_PX=1024
+IMAGE_JPEG_QUALITY=85
+OPENAI_IMAGE_SIZE=1024x1024
 
 TARGET_GROUPS=[]
 ```
