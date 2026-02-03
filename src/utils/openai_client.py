@@ -99,7 +99,7 @@ class OpenAIClient:
         """Gemini-like interface used by existing plugins.
 
         If model is 'auto' (recommended), it will route to an appropriate backend model
-        (e.g. gemini-3-flash / gemini-3-pro / claude-4.5 / gemini-3-image).
+        (e.g. gemini-3-flash / gemini-3-pro-high / claude-sonnet-4.5-thinking / gemini-3-pro-image).
         """
         messages = _history_to_openai_messages(history)
         messages.append({"role": "user", "content": prompt})

@@ -16,9 +16,9 @@ def _get_models_cfg() -> dict:
     You can override via OPENAI_MODELS_JSON, e.g.
     {
       "chat_short": "gemini-3-flash",
-      "chat_long": "gemini-3-pro",
-      "summary": "claude-4.5",
-      "image": "gemini-3-image"
+      "chat_long": "gemini-3-pro-high",
+      "summary": "claude-sonnet-4.5-thinking",
+      "image": "gemini-3-pro-image"
     }
     """
     raw = os.getenv("OPENAI_MODELS_JSON", "").strip()
@@ -33,9 +33,9 @@ def _get_models_cfg() -> dict:
     # Defaults (as requested by Lucas). Exact availability depends on your OpenAI-compatible backend.
     return {
         "chat_short": os.getenv("MODEL_CHAT_SHORT", "gemini-3-flash"),
-        "chat_long": os.getenv("MODEL_CHAT_LONG", "gemini-3-pro"),
-        "summary": os.getenv("MODEL_SUMMARY", "claude-4.5"),
-        "image": os.getenv("MODEL_IMAGE", "gemini-3-image"),
+        "chat_long": os.getenv("MODEL_CHAT_LONG", "gemini-3-pro-high"),
+        "summary": os.getenv("MODEL_SUMMARY", "claude-sonnet-4.5-thinking"),
+        "image": os.getenv("MODEL_IMAGE", "gemini-3-pro-image"),
     }
 
 
