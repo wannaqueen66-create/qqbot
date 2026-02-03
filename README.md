@@ -21,6 +21,7 @@
   - [Chat Stats (水群榜)](#chat-stats-水群榜)
   - [Forwarded messages (合并转发)](#forwarded-messages-合并转发)
   - [Retries & Error handling](#retries--error-handling)
+  - [Security & Privacy](#security--privacy)
   - [Troubleshooting](#troubleshooting)
   - [Operations](#operations)
 - [中文](#中文)
@@ -34,6 +35,7 @@
   - [水群榜](#水群榜)
   - [合并转发](#合并转发)
   - [重试与错误处理](#重试与错误处理)
+  - [安全与隐私](#安全与隐私)
   - [故障排查](#故障排查)
   - [运维](#运维)
 
