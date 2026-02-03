@@ -143,6 +143,14 @@ class OpenAIClient:
         (e.g. gemini-3-flash / gemini-3-pro-high / claude-sonnet-4.5-thinking / gemini-3-pro-image).
         """
         messages = _history_to_openai_messages(history)
+
+        max_hist = int(os.getenv("OPENAI_MAX_HISTORY_MESSAGES", "20"))
+        if len(messages) > max_hist:
+            messages = messages[-max_hist:]
+
+        max_in = int(os.getenv("OPENAI_MAX_INPUT_CHARS", "4000"))
+        if prompt and len(prompt) > max_in:
+            prompt = prompt[-max_in:]
         messages.append({"role": "user", "content": prompt})
 
         chosen_model = model

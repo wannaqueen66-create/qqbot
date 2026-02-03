@@ -134,6 +134,9 @@ ADMIN_USER_IDS=[YOUR_QQ_ID]
 OPENAI_MAX_RETRIES=2
 OPENAI_RETRY_BASE_SEC=0.6
 
+OPENAI_MAX_HISTORY_MESSAGES=20
+OPENAI_MAX_INPUT_CHARS=4000
+
 # Forwarding
 FORWARD_THRESHOLD=100
 BOT_NICKNAME=AI 助手
@@ -145,6 +148,9 @@ TARGET_GROUPS=[]
 ### Intelligent Model Routing
 
 When `OPENAI_MODEL=auto`:
+
+- Keywords like "代码/报错/推理/证明" will prefer the thinking model (`MODEL_THINKING`).
+
 
 - Short chat (<150 chars) -> `MODEL_CHAT_SHORT`
 - Long chat (>=150 chars) -> `MODEL_CHAT_LONG`
@@ -314,6 +320,9 @@ ADMIN_USER_IDS=[YOUR_QQ_ID]
 OPENAI_MAX_RETRIES=2
 OPENAI_RETRY_BASE_SEC=0.6
 
+OPENAI_MAX_HISTORY_MESSAGES=20
+OPENAI_MAX_INPUT_CHARS=4000
+
 FORWARD_THRESHOLD=100
 BOT_NICKNAME=AI 助手
 
@@ -323,6 +332,9 @@ TARGET_GROUPS=[]
 ### 智能模型路由
 
 当 `OPENAI_MODEL=auto` 时：
+
+- 若包含“代码/报错/推理/证明”等关键词，会优先使用 `MODEL_THINKING`。
+
 
 - 短对话（<150 字符）-> `MODEL_CHAT_SHORT`
 - 长对话（>=150 字符）-> `MODEL_CHAT_LONG`
