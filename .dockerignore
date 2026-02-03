@@ -1,0 +1,6 @@
+# Avoid shipping runtime state into Docker build context
+napcat/
+data/
+.git/
+__pycache__/
+*.pyc

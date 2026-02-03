@@ -20,6 +20,8 @@ services:
     build: .
     container_name: qqbot
     restart: always
+    env_file:
+      - .env
     environment:
       - HOST=0.0.0.0
       - PORT=8080
@@ -28,7 +30,6 @@ services:
       - TARGET_GROUPS=${TARGET_GROUPS}
     volumes:
       - ./src:/app/src # Mount src for code updates without rebuilding (optional, but useful)
-      - ./.env:/app/.env # Mount .env to pass config
       - ./data:/app/data # Mount data directory for persistent storage (RSS, DB, usage)
     depends_on:
       - napcat

@@ -8,3 +8,7 @@ napcat/logs/
 dist/
 build/
 *.egg-info/
+# runtime state
+.env
+napcat/
+data/
