@@ -1,7 +1,22 @@
 import os
 import json
-from nonebot import on_command, get_bots
+from nonebot import on_command, get_bots, get_driver
 from nonebot.adapters.onebot.v11 import GroupMessageEvent, PrivateMessageEvent
+
+from src.utils.bot_state import state, mark_connect, mark_disconnect
+
+driver = get_driver()
+
+
+@driver.on_bot_connect
+async def _on_connect(bot):
+    mark_connect()
+
+
+@driver.on_bot_disconnect
+async def _on_disconnect(bot):
+    mark_disconnect()
+
 
 status_cmd = on_command("status", aliases={"状态"}, priority=5, block=True)
 
@@ -53,6 +68,8 @@ async def handle_status(event: GroupMessageEvent | PrivateMessageEvent):
 
     msg = (
         "✅ QQBot Status\n"
+        f"- last_connect: {state.last_connect_ts or 0}\n"
+        f"- last_disconnect: {state.last_disconnect_ts or 0}\n"
         f"- bots_connected: {len(bot_ids)} {bot_ids}\n"
         f"- OPENAI_BASE_URL: {base_url or '[empty]'}\n"
         f"- OPENAI_MODEL: {model or '[empty]'}\n"
