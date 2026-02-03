@@ -1,108 +1,99 @@
 # QQ Robot
 
-A personal assistant bot based on [NoneBot2](https://v2.nonebot.dev/), now fully containerized for easy deployment.
+A personal assistant bot based on [NoneBot2](https://v2.nonebot.dev/), fully containerized for easy deployment.
 
 ## Features
 
 - **Basic Interaction**: `/ping` (在吗), `/help` (帮助/菜单)
-- **Chat**: `@bot <message>` (Group/Private) - **Three-tier intelligent memory system**:
-  - **Tier 1**: Personal short-term memory (3 rounds per user, 10 min)
-  - **Tier 2**: Shared group context (recent topics, 30 min)
-  - **Tier 3**: Long-term summaries (preserved from daily summaries)
+- **Chat**: `@bot <message>` (Group) / direct message (Private)
+  - **Three-tier memory**:
+    - Tier 1: Personal short-term memory
+    - Tier 2: Shared group context (recent topics)
+    - Tier 3: Long-term summaries (from `/summary` and scheduled summaries)
   - `/clear` (清空记忆): Reset personal memory
   - `/memory` (记忆统计): View memory usage stats
-- **RSS Subscription**: 
-    - `/add_rss <url>` (订阅): Subscribe (Group/Private isolated).
-    - `/rss list` (订阅列表): List subscriptions.
-    - `/rss del <url>`: Unsubscribe.
-    - `/rss_digest`: AI-powered daily summary of Top 5 articles.
-- **Reminders**: `/remind add <time> <content>` (提醒), `/remind list`, `/remind del <id>`.
+- **RSS Subscription**:
+  - `/add_rss <url>` (订阅)
+  - `/rss list` (订阅列表)
+  - `/rss del <url>`
+  - `/rss_digest`: AI-powered daily summary of Top 5 articles
+- **Reminders**: `/remind add <time> <content>`, `/remind list`, `/remind del <id>`
 - **Weather**: `/weather [city]` or `/天气 [城市]` (Default: Guangzhou). Powered by **OpenWeatherMap**.
-- **AI Summary**: 
-    - Manual: `/summary` (总结) (Group only).
-    - Scheduled: Daily summaries at 12:00, 18:00, 00:00, 06:00.
+- **AI Summary**:
+  - Manual: `/summary` (总结) (Group only)
+  - Scheduled: 12:00 / 18:00 / 00:00 / 06:00 (Asia/Shanghai)
+
+## LLM Backend (OpenAI-Compatible)
+
+This project uses an **OpenAI-compatible API** (OpenAI protocol) for chat and summarization.
+
+Recommended setup:
+- Use **Antigravity-Manager** as a secure reverse proxy for `/v1/*`.
+- Example base URL: `https://anti.freeapp.tech/v1`
+
+Environment variables:
+- `OPENAI_BASE_URL` (e.g. `https://anti.freeapp.tech/v1`)
+- `OPENAI_API_KEY` (your API key)
+- `OPENAI_MODEL` (default: `gpt-4o-mini`)
 
 ## 🚀 Quick Start (Docker)
 
-The entire project (Bot + NapCat) is containerized. You only need Docker and Docker Compose.
+The entire project (Bot + NapCat) is containerized.
 
-### 1. Start Services
+### 1) Start services
 
 ```bash
 docker-compose up -d
 ```
 
 This will start:
-- **NapCat**: The OneBot provider (handles QQ protocol).
-- **QQBot**: The Python bot logic.
+- **NapCat**: OneBot provider (QQ protocol)
+- **QQBot**: Python bot logic (NoneBot2)
 
-### 2. Configure NapCat (First Time)
+### 2) Configure NapCat (first time)
 
-1.  Open **[http://localhost:6099/webui](http://localhost:6099/webui)** in your browser.
-    *   *Tip: If asked for a Token, run `docker compose logs napcat | grep Token`*
-2.  **Login**: Scan the QR code with your QQ mobile app.
-3.  **Verify Connection**: 
-    - The setup attempts to auto-configure the connection.
-    - If not connected, go to **Network Configuration** in the Web UI and ensure a **Reverse WebSocket** is added:
-        - URL: `ws://qqbot:8080/onebot/v11/ws`
-        - Enable: `true`
+1. Open **http://localhost:6099/webui**
+2. Login by scanning QR code with QQ mobile
+3. Verify Reverse WebSocket:
+   - URL: `ws://qqbot:8080/onebot/v11/ws`
+   - Enable: `true`
 
-### 3. Verify Bot
+### 3) Configure env
 
-Check the bot logs to confirm it's connected:
+```bash
+cp .env.example .env
+```
+
+Edit `.env`:
+
+```ini
+HOST=0.0.0.0
+PORT=8080
+TZ=Asia/Shanghai
+
+OPENAI_BASE_URL=https://anti.freeapp.tech/v1
+OPENAI_API_KEY=your_api_key
+OPENAI_MODEL=gpt-4o-mini
+
+OPENWEATHER_API_KEY=your_openweather_api_key
+TARGET_GROUPS=["12345678"]
+FORWARD_THRESHOLD=100
+```
+
+### 4) Verify
 
 ```bash
 docker-compose logs -f bot
 ```
 
-## Configuration
+## Notes
 
-Configuration is managed via the `.env` file.
+- Group chat replies require **@bot**.
+- Private chat replies should work directly.
+- Current OpenAI-compatible mode is **text-only** (images/audio/video are not processed yet).
 
-1.  **Copy the example file:**
-    ```bash
-    cp .env.example .env
-    ```
+## Management
 
-2.  **Edit `.env`** and fill in your API keys and Group IDs.
-
-```ini
-DRIVER=~fastapi
-HOST=0.0.0.0  # Must be 0.0.0.0 for Docker
-PORT=8080
-LOG_LEVEL=INFO
-
-# Gemini API Keys (Supports multiple keys for load balancing)
-GEMINI_API_KEYS=["your_key_1", "your_key_2"]
-
-# OpenWeatherMap (Required for Weather)
-OPENWEATHER_API_KEY=your_openweather_api_key
-
-# Target Groups for Scheduled Pushes (Daily Weather, Summaries)
-# List of Group IDs (numbers only). 
-# Note: Chat and Commands work in ALL groups by default.
-TARGET_GROUPS=["12345678"]
-```
-
-### Intelligent Model Selection (Quality-First)
-
-The bot automatically selects the optimal Gemini 2.5 model based on task:
-
-- **Chat (Very Short < 30 chars)**: `flash-lite` (minimal responses)
-- **Chat (Short 30-150 chars)**: `flash` (daily conversation)
-- **Chat (Long > 150 chars)**: `pro` (complex questions, better understanding)
-- **Summary (< 500 chars)**: `flash`
-- **Summary (> 500 chars)**: `pro` (higher quality summaries)
-
-## Directory Structure
-
-- `src/`: Bot source code (mounted, hot-reload capable).
-- `napcat/config/`: NapCat configuration.
-- `napcat/qq/`: NapCat session data (Keep safe!).
-- `docker-compose.yml`: Service definition.
-
-## Management Commands
-
-- **Stop**: `docker-compose down`
-- **Restart**: `docker-compose restart`
-- **Update**: `docker-compose pull && docker-compose up -d --build`
+- Stop: `docker-compose down`
+- Restart: `docker-compose restart`
+- Update: `docker-compose pull && docker-compose up -d --build`

@@ -51,18 +51,23 @@ async def handle_chat(event: Union[GroupMessageEvent, PrivateMessageEvent]):
 
         # Import utilities
         from src.utils.conversation_memory import conversation_memory
-        from src.utils.gemini_client import gemini_client
+        from src.utils.openai_client import openai_client
         from src.utils.message_parser import message_parser
         from src.utils.media_downloader import media_downloader
         
-        # Parse message (支持多模态)
+        # Parse message
         try:
             parsed = message_parser.parse_message(event)
         except Exception as e:
             logger.error(f"Message parsing failed: {e}")
             await chat.finish("消息解析失败，请重试。")
             return
-        
+
+        # OpenAI-compatible mode (via Antigravity-Manager /v1): currently text-only
+        if getattr(parsed, "has_media", False):
+            await chat.finish("⚠️ 当前版本暂不支持图片/语音/视频输入，请发送纯文本。")
+            return
+
         # 检查是否为命令消息（避免与命令处理器冲突）
         if parsed.text:
             text_lower = parsed.text.strip().lower()
@@ -190,7 +195,7 @@ async def handle_chat(event: Union[GroupMessageEvent, PrivateMessageEvent]):
                         try:
                             mime_type = media_downloader.get_mime_type(compressed_path)
                             logger.info(f"Uploading image {idx+1} to Gemini (mime_type={mime_type})...")
-                            uploaded = await gemini_client.upload_file(compressed_path, mime_type)
+                            uploaded = await openai_client.upload_file(compressed_path, mime_type)
                             uploaded_files.append(uploaded)
                             logger.info(f"Image {idx+1} uploaded successfully: {uploaded.name}")
                         except Exception as upload_err:
@@ -225,7 +230,7 @@ async def handle_chat(event: Union[GroupMessageEvent, PrivateMessageEvent]):
                         
                         # 上传到 Gemini
                         mime_type = media_downloader.get_mime_type(converted_path)
-                        uploaded = await gemini_client.upload_file(converted_path, mime_type)
+                        uploaded = await openai_client.upload_file(converted_path, mime_type)
                         uploaded_files.append(uploaded)
                         logger.info(f"Audio uploaded: {uploaded.name}")
                     except Exception as e:
@@ -240,7 +245,7 @@ async def handle_chat(event: Union[GroupMessageEvent, PrivateMessageEvent]):
                         
                         file_path = await media_downloader.download_video(video.url)
                         mime_type = media_downloader.get_mime_type(file_path)
-                        uploaded = await gemini_client.upload_file(file_path, mime_type)
+                        uploaded = await openai_client.upload_file(file_path, mime_type)
                         uploaded_files.append(uploaded)
                         logger.info(f"Video uploaded: {uploaded.name}")
                     except Exception as e:
@@ -288,8 +293,8 @@ async def handle_chat(event: Union[GroupMessageEvent, PrivateMessageEvent]):
                     text_prompt = parsed.text
                 
                 # Force Flash or Pro for multimodal, Lite might not support it well or at all
-                reply = await gemini_client.generate_multimodal_content(
-                    model='gemini-2.5-flash', 
+                reply = await openai_client.generate_multimodal_content(
+                    model='auto', 
                     text=text_prompt,
                     files=uploaded_files,
                     history=full_history,
@@ -301,7 +306,7 @@ async def handle_chat(event: Union[GroupMessageEvent, PrivateMessageEvent]):
                     await chat.finish("⚠️ 抱歉，我无法下载或处理您发送的图片/媒体文件。可能是网络原因或链接失效。")
     
                 # 纯文本调用
-                reply = await gemini_client.generate_content(
+                reply = await openai_client.generate_content(
                     'auto', 
                     parsed.text, 
                     task_type='chat',

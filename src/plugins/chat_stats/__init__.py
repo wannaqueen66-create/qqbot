@@ -197,7 +197,7 @@ async def generate_ai_commentary(nickname: str, recent_messages: list) -> str:
         str: AI生成的点评
     """
     try:
-        from src.utils.gemini_client import gemini_client
+        from src.utils.openai_client import openai_client
         
         # 构建提示词
         messages_text = "\n".join([
@@ -225,8 +225,8 @@ TA最近的几条发言：
 """
         
         # 调用AI生成
-        commentary = await gemini_client.generate_content(
-            model='gemini-2.5-flash',  # 使用Flash模型，快速且便宜
+        commentary = await openai_client.generate_content(
+            model='auto',  # 使用Flash模型，快速且便宜
             prompt=prompt,
             task_type='chat'
         )

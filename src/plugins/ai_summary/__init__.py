@@ -56,8 +56,6 @@ async def handle_manual_summary(event: GroupMessageEvent):
     summary = markdown_to_plain_text(summary)
     conversation_memory.add_group_summary(str(group_id), f"手动总结: {summary}")
     
-    conversation_memory.add_group_summary(str(group_id), f"手动总结: {summary}")
-    
     msg = f"📝 群聊总结：\n{summary}"
     
     # Use smart forwarding
@@ -88,7 +86,7 @@ async def record_message(event: GroupMessageEvent):
 
 # Gemini API Summarization
 async def generate_summary(messages):
-    from src.utils.gemini_client import gemini_client
+    from src.utils.openai_client import openai_client
     
     if not messages:
         return "没有消息可总结。"
@@ -103,7 +101,7 @@ async def generate_summary(messages):
         f"{chat_text}"
     )
 
-    return await gemini_client.generate_content('auto', prompt, task_type='summary')
+    return await openai_client.generate_content('auto', prompt, task_type='summary')
 
 # Scheduled Summary Task
 async def push_summary(period_name):

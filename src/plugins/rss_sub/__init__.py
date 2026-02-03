@@ -170,7 +170,7 @@ async def select_top_entries(entries, feed_title):
     Falls back to latest 5 if AI fails.
     """
     try:
-        from src.utils.gemini_client import gemini_client
+        from src.utils.openai_client import openai_client
         
         # Build prompt with all entry titles
         entries_text = "\n".join([
@@ -186,8 +186,8 @@ async def select_top_entries(entries, feed_title):
         )
         
         # Use Pro model for highest quality filtering
-        response = await gemini_client.generate_content(
-            'gemini-2.5-pro', 
+        response = await openai_client.generate_content(
+            'auto', 
             prompt, 
             task_type='summary',
             auto_select=False
@@ -212,7 +212,7 @@ async def select_top_entries(entries, feed_title):
             logger.warning(f"AI返回的索引无效，使用默认策略")
         
     except ValueError as e:
-        # Handle gemini_client specific errors (finish_reason issues)
+        # Handle openai_client specific errors (finish_reason issues)
         logger.warning(f"AI筛选失败 (内容问题): {e}，使用默认策略")
     except Exception as e:
         # Handle all other unexpected errors
@@ -276,7 +276,7 @@ async def handle_rss_digest(event: Union[GroupMessageEvent, PrivateMessageEvent]
     )
     
     
-    from src.utils.gemini_client import gemini_client
+    from src.utils.openai_client import openai_client
     from src.utils.text_formatter import markdown_to_plain_text
     
     # Variables to store results
@@ -284,11 +284,11 @@ async def handle_rss_digest(event: Union[GroupMessageEvent, PrivateMessageEvent]
     error_message = None
     
     try:
-        digest = await gemini_client.generate_content('auto', prompt, task_type='summary')
+        digest = await openai_client.generate_content('auto', prompt, task_type='summary')
         # Convert Markdown to plain text for QQ compatibility
         digest = markdown_to_plain_text(digest)
     except ValueError as e:
-        # Handle specific errors from gemini_client
+        # Handle specific errors from openai_client
         error_msg = str(e)
         if "安全过滤器" in error_msg or "SAFETY" in error_msg:
             error_message = "⚠️ 生成摘要失败：RSS内容包含敏感信息被过滤\n建议：请检查订阅源内容"

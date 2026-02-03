@@ -25,7 +25,6 @@ services:
       - PORT=8080
       - TZ=Asia/Shanghai
       - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY}
-      - GEMINI_API_KEYS=${GEMINI_API_KEYS}
       - TARGET_GROUPS=${TARGET_GROUPS}
     volumes:
       - ./src:/app/src # Mount src for code updates without rebuilding (optional, but useful)
