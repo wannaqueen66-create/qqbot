@@ -2,6 +2,7 @@ import os
 import json
 import aiohttp
 from nonebot.log import logger
+from src.utils.model_router import choose_model
 from typing import List, Dict, Optional, Any
 
 
@@ -94,14 +95,21 @@ class OpenAIClient:
         except Exception:
             logger.error(f"OpenAI API unexpected response: {str(data)[:500]}")
             return "[Error] API 返回缺少 choices/message"
+    async def generate_content(self, model: str, prompt: str, task_type: str = "chat", auto_select: bool = True, history=None, has_media: bool = False):
+        """Gemini-like interface used by existing plugins.
 
-    async def generate_content(self, model: str, prompt: str, task_type: str = "chat", auto_select: bool = True, history=None):
-        # Keep a Gemini-like interface so existing plugins can migrate with minimal changes.
+        If model is 'auto' (recommended), it will route to an appropriate backend model
+        (e.g. gemini-3-flash / gemini-3-pro / claude-4.5 / gemini-3-image).
+        """
         messages = _history_to_openai_messages(history)
         messages.append({"role": "user", "content": prompt})
 
-        # ignore model='auto' for now
-        chosen_model = self.model if (not model or model == "auto") else model
+        chosen_model = model
+        if not chosen_model or chosen_model == "auto":
+            choice = choose_model(prompt=prompt, task_type=task_type, has_media=has_media)
+            chosen_model = choice.model
+            logger.info(f"[model_router] choose model={chosen_model} reason={choice.reason}")
+
         return await self.chat_completions(messages, model=chosen_model)
 
 
