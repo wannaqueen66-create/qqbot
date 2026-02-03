@@ -195,6 +195,11 @@ OPENAI_MAX_RETRIES=2
 OPENAI_RETRY_BASE_SEC=0.6
 ```
 
+### Security & Privacy
+
+- **Do NOT commit** `.env`, `napcat/`, or `data/` to public repos.
+- Do not put real QQ IDs or private domains in docs; use placeholders.
+
 ### Troubleshooting
 
 1) WS keeps reconnecting / no reply
@@ -359,6 +364,11 @@ BOT_NICKNAME=AI 助手
 OPENAI_MAX_RETRIES=2
 OPENAI_RETRY_BASE_SEC=0.6
 ```
+
+### 安全与隐私
+
+- **不要提交** `.env`、`napcat/`、`data/` 到公开仓库。
+- 文档里不要写真实 QQ 号/私人域名，统一使用占位符。
 
 ### 故障排查
 
