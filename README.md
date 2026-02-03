@@ -5,7 +5,9 @@ A personal assistant bot based on [NoneBot2](https://v2.nonebot.dev/), fully con
 ## Features
 
 - **Basic Interaction**: `/ping` (在吗), `/help` (帮助/菜单)
-- **Chat**: `@bot <message>` (Group) / direct message (Private)
+- **Chat**:
+  - **Group**: `@bot <message>` (群聊必须 @ 才回复)
+  - **Private**: direct message works
   - **Three-tier memory**:
     - Tier 1: Personal short-term memory
     - Tier 2: Shared group context (recent topics)
@@ -29,71 +31,71 @@ This project uses an **OpenAI-compatible API** (OpenAI protocol) for chat and su
 
 Recommended setup:
 - Use **Antigravity-Manager** as a secure reverse proxy for `/v1/*`.
-- Example base URL: `https://anti.freeapp.tech/v1`
+- On the same VPS, you can call it locally: `http://127.0.0.1:8045/v1`
 
 Environment variables:
-- `OPENAI_BASE_URL` (e.g. `https://anti.freeapp.tech/v1`)
-- `OPENAI_API_KEY` (your API key)
-- `OPENAI_MODEL` (default: `gpt-4o-mini`)
+- `OPENAI_BASE_URL` (e.g. `http://127.0.0.1:8045/v1` or `https://anti.freeapp.tech/v1`)
+- `OPENAI_API_KEY`
+- `OPENAI_MODEL` (set to `auto` to enable routing)
+
+### Intelligent model routing
+
+When `OPENAI_MODEL=auto`, the bot will choose model by task:
+
+- Short chat (<150 chars) -> `MODEL_CHAT_SHORT` (default: `gemini-3-flash`)
+- Long chat (>=150 chars) -> `MODEL_CHAT_LONG` (default: `gemini-3-pro-high`)
+- Summary tasks -> `MODEL_SUMMARY` (default: `claude-sonnet-4.5-thinking`)
+- Image tasks -> `MODEL_IMAGE` (default: `gemini-3-pro-image`)
+
+> Actual model ids come from Antigravity-Manager “Supported Models” list.
 
 ## 🚀 Quick Start (Docker)
 
-The entire project (Bot + NapCat) is containerized.
-
-### 1) Start services
+### 1) Configure env
 
 ```bash
-docker-compose up -d
+cp .env.example .env
+```
+
+Fill `.env`:
+
+```ini
+OPENAI_BASE_URL=http://127.0.0.1:8045/v1
+OPENAI_API_KEY=YOUR_KEY
+OPENAI_MODEL=auto
+
+MODEL_CHAT_SHORT=gemini-3-flash
+MODEL_CHAT_LONG=gemini-3-pro-high
+MODEL_SUMMARY=claude-sonnet-4.5-thinking
+MODEL_IMAGE=gemini-3-pro-image
+```
+
+### 2) Start services
+
+```bash
+docker-compose up -d --build
 ```
 
 This will start:
 - **NapCat**: OneBot provider (QQ protocol)
 - **QQBot**: Python bot logic (NoneBot2)
 
-### 2) Configure NapCat (first time)
+> Default `docker-compose.yml` uses `network_mode: host` so the bot can access local Antigravity `127.0.0.1:8045`.
 
-1. Open **http://localhost:6099/webui**
+### 3) Configure NapCat (first time)
+
+1. Open WebUI: `http://<VPS公网IP>:6099/webui`
 2. Login by scanning QR code with QQ mobile
 3. Verify Reverse WebSocket:
-   - URL: `ws://qqbot:8080/onebot/v11/ws`
+   - URL: `ws://127.0.0.1:8080/onebot/v11/ws`
    - Enable: `true`
-
-### 3) Configure env
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env`:
-
-```ini
-HOST=0.0.0.0
-PORT=8080
-TZ=Asia/Shanghai
-
-OPENAI_BASE_URL=https://anti.freeapp.tech/v1
-OPENAI_API_KEY=your_api_key
-OPENAI_MODEL=gpt-4o-mini
-
-OPENWEATHER_API_KEY=your_openweather_api_key
-TARGET_GROUPS=["12345678"]
-FORWARD_THRESHOLD=100
-```
-
-### 4) Verify
-
-```bash
-docker-compose logs -f bot
-```
 
 ## Notes
 
-- Group chat replies require **@bot**.
-- Private chat replies should work directly.
 - Current OpenAI-compatible mode is **text-only** (images/audio/video are not processed yet).
 
 ## Management
 
 - Stop: `docker-compose down`
 - Restart: `docker-compose restart`
-- Update: `docker-compose pull && docker-compose up -d --build`
+- Logs: `docker-compose logs -f`

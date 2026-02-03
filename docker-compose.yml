@@ -1,41 +1,27 @@
-
+version: "3.8"
 services:
   napcat:
     image: mlikiowa/napcat-docker:latest
     container_name: napcat
     restart: always
-    ports:
-      - "6099:6099" # Web UI for NapCat
+    network_mode: host
     volumes:
       - ./napcat/config:/app/napcat/config
       - ./napcat/qq:/app/.config/QQ
     environment:
       - TZ=Asia/Shanghai
       - WS_ENABLE=true
-      - WS_URLS=["ws://qqbot:8080/onebot/v11/ws"]
-    networks:
-      - bot_net
+      - WS_URLS=["ws://127.0.0.1:8080/onebot/v11/ws"]
 
   bot:
     build: .
     container_name: qqbot
     restart: always
+    network_mode: host
     env_file:
       - .env
-    environment:
-      - HOST=0.0.0.0
-      - PORT=8080
-      - TZ=Asia/Shanghai
-      - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY}
-      - TARGET_GROUPS=${TARGET_GROUPS}
     volumes:
-      - ./src:/app/src # Mount src for code updates without rebuilding (optional, but useful)
-      - ./data:/app/data # Mount data directory for persistent storage (RSS, DB, usage)
+      - ./src:/app/src
+      - ./data:/app/data
     depends_on:
       - napcat
-    networks:
-      - bot_net
-
-networks:
-  bot_net:
-    driver: bridge
