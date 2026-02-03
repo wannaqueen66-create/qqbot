@@ -2,6 +2,7 @@ import json
 import os
 from datetime import datetime
 from nonebot import on_command, require, get_bot
+from src.utils.safe_bot import safe_get_bot
 from nonebot.adapters import Message
 from nonebot.adapters.onebot.v11 import GroupMessageEvent, PrivateMessageEvent
 from nonebot.params import CommandArg
@@ -124,10 +125,8 @@ async def handle_remind(event: Union[GroupMessageEvent, PrivateMessageEvent], ar
 async def check_reminders():
     now = datetime.now().strftime("%H:%M")
     data = load_reminders()
-    try:
-        bot = get_bot()
-    except Exception:
-        # bot not connected yet; skip silently
+    bot = safe_get_bot()
+    if not bot:
         return
     
     for target_id, info in data.items():

@@ -1,5 +1,6 @@
 import aiohttp
 from nonebot import require, get_bot, on_command
+from src.utils.safe_bot import safe_get_bot
 from nonebot.log import logger
 from nonebot.adapters import Message
 from nonebot.adapters.onebot.v11 import GroupMessageEvent, PrivateMessageEvent
@@ -131,9 +132,8 @@ async def send_daily_weather():
     # Load target groups
     target_groups = json.loads(os.getenv("TARGET_GROUPS", "[]"))
     
-    try:
-        bot = get_bot()
-    except Exception:
+    bot = safe_get_bot()
+    if not bot:
         return
     for group_id in target_groups:
         try:

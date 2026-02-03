@@ -1,4 +1,5 @@
 from nonebot import on_message, on_command, get_bot
+from src.utils.safe_bot import safe_get_bot
 from nonebot.adapters.onebot.v11 import GroupMessageEvent, Bot
 from nonebot.log import logger
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -110,9 +111,8 @@ async def push_summary(period_name):
     target_groups = json.loads(os.getenv("TARGET_GROUPS", "[]"))
     target_groups = [int(gid) for gid in target_groups]
     
-    try:
-        bot = get_bot()
-    except Exception:
+    bot = safe_get_bot()
+    if not bot:
         return
     from src.utils.database import db
     
