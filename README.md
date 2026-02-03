@@ -154,7 +154,7 @@ When `OPENAI_MODEL=auto`:
 ### Admin-only commands
 
 - `/status` is **admin-only** and **private-chat only**.
-- Configure admins via `ADMIN_USER_IDS` (JSON list or comma-separated). Default: `[375024323]`.
+- Configure admins via `ADMIN_USER_IDS` (JSON list or comma-separated). Default: [ADMIN_QQ_ID].
 
 ### Chat Stats (水群榜)
 
@@ -325,7 +325,7 @@ TARGET_GROUPS=[]
 ### 管理员命令
 
 - `/status` 仅管理员私聊可用。
-- 管理员通过 `ADMIN_USER_IDS` 配置（JSON 列表或逗号分隔），默认 `[375024323]`。
+- 管理员通过 `ADMIN_USER_IDS` 配置（JSON 列表或逗号分隔），默认 [ADMIN_QQ_ID]。
 
 ### 水群榜
 
