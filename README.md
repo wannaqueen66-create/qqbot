@@ -1,6 +1,10 @@
 # QQBot (NapCat + NoneBot2) — OpenAI-Compatible Backend
 
-一个基于 **NoneBot2 + OneBot V11(NapCat)** 的 QQ 助手机器人项目。模型能力通过 **Antigravity-Manager 提供的 OpenAI-compatible /v1 API** 接入，并支持按任务自动路由模型。
+一个基于 **NoneBot2 + OneBot V11 (NapCat)** 的 QQ 助手机器人。
+
+- **LLM 后端**：通过 **Antigravity-Manager 提供的 OpenAI-compatible /v1 API** 接入（不直连 OpenAI/Claude/Gemini 官方）。
+- **模型自动路由**：按任务/长度选择 `gemini-3-flash / gemini-3-pro-high / claude-sonnet-4.5-thinking / gemini-3-pro-image`。
+- **部署方式**：默认 `network_mode: host`（确保容器可访问宿主机 `127.0.0.1:8045`）。
 
 ---
 
@@ -8,20 +12,30 @@
 
 - [English](#english)
   - [Features](#features)
-  - [LLM Backend (OpenAI-Compatible)](#llm-backend-openai-compatible)
-  - [Intelligent Model Routing](#intelligent-model-routing)
-  - [Quick Start (Docker on VPS)](#quick-start-docker-on-vps)
+  - [Architecture](#architecture)
+  - [Quick Start (VPS Docker)](#quick-start-vps-docker)
   - [NapCat Login & Reverse WS](#napcat-login--reverse-ws)
+  - [Configuration (.env)](#configuration-env)
+  - [Intelligent Model Routing](#intelligent-model-routing)
+  - [Admin-only commands](#admin-only-commands)
+  - [Chat Stats (水群榜)](#chat-stats-水群榜)
+  - [Forwarded messages (合并转发)](#forwarded-messages-合并转发)
+  - [Retries & Error handling](#retries--error-handling)
+  - [Troubleshooting](#troubleshooting)
   - [Operations](#operations)
-  - [Notes](#notes)
 - [中文](#中文)
   - [功能](#功能)
-  - [LLM 后端（OpenAI 兼容协议）](#llm-后端openai-兼容协议)
-  - [智能模型路由](#智能模型路由)
-  - [快速开始（VPS Docker 部署）](#快速开始vps-docker-部署)
+  - [架构](#架构)
+  - [快速开始（VPS Docker）](#快速开始vps-docker)
   - [NapCat 登录与反向 WS](#napcat-登录与反向-ws)
+  - [配置（.env）](#配置env)
+  - [智能模型路由](#智能模型路由)
+  - [管理员命令](#管理员命令)
+  - [水群榜](#水群榜)
+  - [合并转发](#合并转发)
+  - [重试与错误处理](#重试与错误处理)
+  - [故障排查](#故障排查)
   - [运维](#运维)
-  - [注意事项](#注意事项)
 
 ---
 
@@ -43,48 +57,69 @@
   - Scheduled: 12:00 / 18:00 / 00:00 / 06:00 (Asia/Shanghai)
 - Status: `/status` (admin-only, private chat only)
 
-### LLM Backend (OpenAI-Compatible)
+### Architecture
 
-This project talks to an **OpenAI-compatible** API (OpenAI protocol), recommended to be provided by **Antigravity-Manager**.
+```
+QQ (NapCat OneBot)  ->  NoneBot2 (this repo)  ->  Antigravity-Manager (/v1)  ->  QQ
+         ^                        |
+         |---- Reverse WebSocket -|
+```
 
-- Local on the same VPS: `http://127.0.0.1:8045/v1`
-- Or via your domain: `https://anti.freeapp.tech/v1`
+### Quick Start (VPS Docker)
 
-Required env:
-- `OPENAI_BASE_URL`
-- `OPENAI_API_KEY`
-- `OPENAI_MODEL` (set to `auto` to enable routing)
+1) Install Docker (Debian/Ubuntu):
 
-### Intelligent Model Routing
+```bash
+sudo apt-get update
+sudo apt-get install -y docker.io docker-compose-plugin
+sudo systemctl enable --now docker
+```
 
-When `OPENAI_MODEL=auto`, the bot selects models by task:
+2) Clone:
 
-- Short chat (<150 chars) -> `MODEL_CHAT_SHORT` (default: `gemini-3-flash`)
-- Long chat (>=150 chars) -> `MODEL_CHAT_LONG` (default: `gemini-3-pro-high`)
-- Summary tasks -> `MODEL_SUMMARY` (default: `claude-sonnet-4.5-thinking`)
-- Image tasks -> `MODEL_IMAGE` (default: `gemini-3-pro-image`)
+```bash
+cd /opt
+git clone https://github.com/wannaqueen66-create/qqbot.git
+cd qqbot
+```
 
-Retry knobs (optional):
-- `OPENAI_MAX_RETRIES` (default 2)
-- `OPENAI_RETRY_BASE_SEC` (default 0.6)
-
-### Quick Start (Docker on VPS)
-
-> Default `docker-compose.yml` uses `network_mode: host` so the bot can call local Antigravity on `127.0.0.1:8045`.
-
-1) Configure env:
+3) Create `.env`:
 
 ```bash
 cp .env.example .env
+nano .env
 ```
 
-Edit `.env` (example):
+4) Start:
+
+```bash
+docker-compose up -d --build
+```
+
+> `docker-compose.yml` uses `network_mode: host` so the bot can call local Antigravity on `127.0.0.1:8045`.
+
+### NapCat Login & Reverse WS
+
+- WebUI: `http://<VPS_PUBLIC_IP>:6099/webui`
+- Login: scan QR code
+- Reverse WebSocket (NapCat WebUI -> Network):
+  - `ws://127.0.0.1:8080/onebot/v11/ws`
+
+### Configuration (.env)
+
+Required:
 
 ```ini
+# OpenAI-compatible backend
 OPENAI_BASE_URL=http://127.0.0.1:8045/v1
 OPENAI_API_KEY=YOUR_KEY
 OPENAI_MODEL=auto
+```
 
+Optional (recommended defaults):
+
+```ini
+# Intelligent routing
 MODEL_CHAT_SHORT=gemini-3-flash
 MODEL_CHAT_LONG=gemini-3-pro-high
 MODEL_SUMMARY=claude-sonnet-4.5-thinking
@@ -93,33 +128,94 @@ MODEL_IMAGE=gemini-3-pro-image
 # Admin-only commands
 ADMIN_USER_IDS=[375024323]
 
+# Retry
+OPENAI_MAX_RETRIES=2
+OPENAI_RETRY_BASE_SEC=0.6
+
+# Forwarding
+FORWARD_THRESHOLD=100
+BOT_NICKNAME=AI 助手
+
+# Scheduled push targets
+TARGET_GROUPS=[]
+```
+
+### Intelligent Model Routing
+
+When `OPENAI_MODEL=auto`:
+
+- Short chat (<150 chars) -> `MODEL_CHAT_SHORT`
+- Long chat (>=150 chars) -> `MODEL_CHAT_LONG`
+- Summary tasks -> `MODEL_SUMMARY`
+- Image tasks -> `MODEL_IMAGE`
+
+> Actual model ids should match Antigravity-Manager “Supported Models” list.
+
+### Admin-only commands
+
+- `/status` is **admin-only** and **private-chat only**.
+- Configure admins via `ADMIN_USER_IDS` (JSON list or comma-separated). Default: `[375024323]`.
+
+### Chat Stats (水群榜)
+
+Commands (group):
+
+- `/水群榜` (aliases: `/聊天榜`, `/发言榜`)
+
+Config (optional):
+
+```ini
+ENABLE_CHAT_STATS=true
+STATS_PUSH_HOUR=23
+STATS_TOP_COUNT=10
+STATS_FILE=data/chat_stats.json
+```
+
+### Forwarded messages (合并转发)
+
+Long replies will be sent as **forwarded messages** to reduce spam.
+
+Config:
+
+```ini
+FORWARD_THRESHOLD=100
+BOT_NICKNAME=AI 助手
+```
+
+If forward message fails (anti-spam), it will fall back to normal send.
+
+### Retries & Error handling
+
+OpenAI requests retry on network errors / 429 / 5xx.
+
+Config:
+
+```ini
 OPENAI_MAX_RETRIES=2
 OPENAI_RETRY_BASE_SEC=0.6
 ```
 
-2) Start:
+### Troubleshooting
 
-```bash
-docker-compose up -d --build
-```
+1) WS keeps reconnecting / no reply
+- Ensure NapCat reverse WS is `ws://127.0.0.1:8080/onebot/v11/ws` (NOT `ws://qqbot:8080/...` in host network)
+- Check logs:
+  - `docker-compose logs -f napcat`
+  - `docker-compose logs -f bot`
 
-### NapCat Login & Reverse WS
+2) `/status` returns "无权限"
+- Must be private chat
+- `user_id` must be in `ADMIN_USER_IDS`
 
-- WebUI: `http://<VPS_PUBLIC_IP>:6099/webui`
-- Login: scan QR code
-- Reverse WS (WebUI -> Network): `ws://127.0.0.1:8080/onebot/v11/ws`
+3) LLM call fails
+- Check `OPENAI_BASE_URL` and `OPENAI_API_KEY`
+- Try `/status` (admin) to verify env is loaded
 
 ### Operations
 
 - Logs: `docker-compose logs -f`
 - Restart: `docker-compose restart`
 - Stop: `docker-compose down`
-
-### Notes
-
-- Group chat replies require **@bot**.
-- `/status` is **admin-only** and **private-chat only**.
-- Current OpenAI-compatible mode is text-first.
 
 ---
 
@@ -141,48 +237,66 @@ docker-compose up -d --build
   - 定时：12:00 / 18:00 / 00:00 / 06:00（上海时区）
 - 状态：`/status`（仅管理员私聊可用）
 
-### LLM 后端（OpenAI 兼容协议）
+### 架构
 
-本项目通过 **OpenAI 协议**调用模型，推荐使用 **Antigravity-Manager** 做统一反代与模型管理。
+```
+QQ (NapCat OneBot)  ->  NoneBot2 (本项目)  ->  Antigravity-Manager (/v1)  ->  QQ
+         ^                        |
+         |---- Reverse WebSocket -|
+```
 
-- VPS 本机：`http://127.0.0.1:8045/v1`
-- 域名：`https://anti.freeapp.tech/v1`
+### 快速开始（VPS Docker）
 
-必需环境变量：
-- `OPENAI_BASE_URL`
-- `OPENAI_API_KEY`
-- `OPENAI_MODEL`（设为 `auto` 开启智能路由）
+1) 安装 Docker（Debian/Ubuntu）：
 
-### 智能模型路由
+```bash
+sudo apt-get update
+sudo apt-get install -y docker.io docker-compose-plugin
+sudo systemctl enable --now docker
+```
 
-当 `OPENAI_MODEL=auto` 时，根据任务自动选择模型：
+2) 克隆：
 
-- 短对话（<150 字符）-> `MODEL_CHAT_SHORT`（默认 `gemini-3-flash`）
-- 长对话（>=150 字符）-> `MODEL_CHAT_LONG`（默认 `gemini-3-pro-high`）
-- 总结类任务 -> `MODEL_SUMMARY`（默认 `claude-sonnet-4.5-thinking`）
-- 图片类任务 -> `MODEL_IMAGE`（默认 `gemini-3-pro-image`）
+```bash
+cd /opt
+git clone https://github.com/wannaqueen66-create/qqbot.git
+cd qqbot
+```
 
-可选重试参数：
-- `OPENAI_MAX_RETRIES`（默认 2）
-- `OPENAI_RETRY_BASE_SEC`（默认 0.6）
-
-### 快速开始（VPS Docker 部署）
-
-> 默认 compose 使用 `network_mode: host`，这样 qqbot 才能访问本机 `127.0.0.1:8045` 的 Antigravity。
-
-1) 配置环境变量：
+3) 配置 `.env`：
 
 ```bash
 cp .env.example .env
+nano .env
 ```
 
-编辑 `.env`（示例）：
+4) 启动：
+
+```bash
+docker-compose up -d --build
+```
+
+> 默认 compose 使用 `network_mode: host`，确保容器能访问宿主机 `127.0.0.1:8045` 的 Antigravity。
+
+### NapCat 登录与反向 WS
+
+- WebUI：`http://<VPS公网IP>:6099/webui`
+- 扫码登录 QQ
+- 反向 WS（WebUI -> Network）：`ws://127.0.0.1:8080/onebot/v11/ws`
+
+### 配置（.env）
+
+必需：
 
 ```ini
 OPENAI_BASE_URL=http://127.0.0.1:8045/v1
 OPENAI_API_KEY=你的KEY
 OPENAI_MODEL=auto
+```
 
+可选（推荐）：
+
+```ini
 MODEL_CHAT_SHORT=gemini-3-flash
 MODEL_CHAT_LONG=gemini-3-pro-high
 MODEL_SUMMARY=claude-sonnet-4.5-thinking
@@ -192,28 +306,78 @@ ADMIN_USER_IDS=[375024323]
 
 OPENAI_MAX_RETRIES=2
 OPENAI_RETRY_BASE_SEC=0.6
+
+FORWARD_THRESHOLD=100
+BOT_NICKNAME=AI 助手
+
+TARGET_GROUPS=[]
 ```
 
-2) 启动：
+### 智能模型路由
 
-```bash
-docker-compose up -d --build
+当 `OPENAI_MODEL=auto` 时：
+
+- 短对话（<150 字符）-> `MODEL_CHAT_SHORT`
+- 长对话（>=150 字符）-> `MODEL_CHAT_LONG`
+- 总结类任务 -> `MODEL_SUMMARY`
+- 图片类任务 -> `MODEL_IMAGE`
+
+### 管理员命令
+
+- `/status` 仅管理员私聊可用。
+- 管理员通过 `ADMIN_USER_IDS` 配置（JSON 列表或逗号分隔），默认 `[375024323]`。
+
+### 水群榜
+
+群聊命令：
+
+- `/水群榜`（别名：`/聊天榜`、`/发言榜`）
+
+配置（可选）：
+
+```ini
+ENABLE_CHAT_STATS=true
+STATS_PUSH_HOUR=23
+STATS_TOP_COUNT=10
+STATS_FILE=data/chat_stats.json
 ```
 
-### NapCat 登录与反向 WS
+### 合并转发
 
-- WebUI：`http://<VPS公网IP>:6099/webui`
-- 扫码登录 QQ
-- 反向 WS（WebUI -> Network）：`ws://127.0.0.1:8080/onebot/v11/ws`
+AI 长回复超过阈值会自动用“合并转发”发送，减少刷屏。
+
+```ini
+FORWARD_THRESHOLD=100
+BOT_NICKNAME=AI 助手
+```
+
+### 重试与错误处理
+
+对网络错误 / 429 / 5xx 会自动重试。
+
+```ini
+OPENAI_MAX_RETRIES=2
+OPENAI_RETRY_BASE_SEC=0.6
+```
+
+### 故障排查
+
+1) WS 频繁重连 / 不回复
+- host 网络模式下，NapCat 反向 WS 必须是：`ws://127.0.0.1:8080/onebot/v11/ws`
+- 查看日志：
+  - `docker-compose logs -f napcat`
+  - `docker-compose logs -f bot`
+
+2) `/status` 提示无权限
+- 必须私聊
+- QQ 号必须在 `ADMIN_USER_IDS`
+
+3) 模型调用失败
+- 检查 `OPENAI_BASE_URL`、`OPENAI_API_KEY`
+- 管理员私聊 `/status` 看配置是否加载
 
 ### 运维
 
 - 看日志：`docker-compose logs -f`
 - 重启：`docker-compose restart`
 - 停止：`docker-compose down`
-
-### 注意事项
-
-- 群里必须 @ 才回复。
-- `/status` 仅管理员私聊可用（由 `ADMIN_USER_IDS` 控制）。
-- 当前版本以“文本优先”，多模态后续可扩展。
