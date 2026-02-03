@@ -92,6 +92,8 @@ This will start:
 
 ## Notes
 
+- `/status` is **admin-only** and **private-chat only**. Configure via `ADMIN_USER_IDS`.
+
 - Current OpenAI-compatible mode is **text-only** (images/audio/video are not processed yet).
 
 ## Management
