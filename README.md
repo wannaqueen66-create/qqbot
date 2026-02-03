@@ -126,7 +126,7 @@ MODEL_SUMMARY=claude-sonnet-4.5-thinking
 MODEL_IMAGE=gemini-3-pro-image
 
 # Admin-only commands
-ADMIN_USER_IDS=[375024323]
+ADMIN_USER_IDS=[YOUR_QQ_ID]
 
 # Retry
 OPENAI_MAX_RETRIES=2
@@ -302,7 +302,7 @@ MODEL_CHAT_LONG=gemini-3-pro-high
 MODEL_SUMMARY=claude-sonnet-4.5-thinking
 MODEL_IMAGE=gemini-3-pro-image
 
-ADMIN_USER_IDS=[375024323]
+ADMIN_USER_IDS=[YOUR_QQ_ID]
 
 OPENAI_MAX_RETRIES=2
 OPENAI_RETRY_BASE_SEC=0.6
