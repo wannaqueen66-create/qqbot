@@ -4,6 +4,7 @@ from nonebot import on_command, get_bots, get_driver
 from nonebot.adapters.onebot.v11 import GroupMessageEvent, PrivateMessageEvent
 
 from src.utils.bot_state import state, mark_connect, mark_disconnect
+from src.utils.auth import is_admin_private
 
 driver = get_driver()
 
@@ -52,12 +53,10 @@ def _admin_user_ids() -> set[int]:
 
 @status_cmd.handle()
 async def handle_status(event: GroupMessageEvent | PrivateMessageEvent):
-    # Security: only allow admin in private chat
-    if isinstance(event, GroupMessageEvent):
-        await status_cmd.finish("（该命令仅管理员私聊可用）")
-
-    admins = _admin_user_ids()
-    if int(getattr(event, "user_id", 0) or 0) not in admins:
+    # Security: admin-only & private-chat only
+    if not is_admin_private(event):
+        if isinstance(event, GroupMessageEvent):
+            await status_cmd.finish("（该命令仅管理员私聊可用）")
         await status_cmd.finish("无权限")
 
     bots = get_bots()
