@@ -1,5 +1,6 @@
 import os
 import json
+import asyncio
 import aiohttp
 from nonebot.log import logger
 from src.utils.model_router import choose_model
@@ -77,24 +78,64 @@ class OpenAIClient:
         }
 
         timeout = aiohttp.ClientTimeout(total=self.timeout_sec)
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.post(url, headers=headers, json=payload) as resp:
-                text = await resp.text()
-                if resp.status >= 400:
-                    logger.error(f"OpenAI API error: status={resp.status} body={text[:500]}")
-                    return f"[Error] API 调用失败（HTTP {resp.status}）"
 
-                try:
-                    data = json.loads(text)
-                except Exception:
-                    logger.error(f"OpenAI API invalid JSON: {text[:500]}")
-                    return "[Error] API 返回格式异常"
+        # lightweight retry: network errors + 429/5xx
+        max_attempts = int(os.getenv("OPENAI_MAX_RETRIES", "2")) + 1
+        base_sleep = float(os.getenv("OPENAI_RETRY_BASE_SEC", "0.6"))
 
-        try:
-            return (data["choices"][0]["message"]["content"] or "").strip()
-        except Exception:
-            logger.error(f"OpenAI API unexpected response: {str(data)[:500]}")
-            return "[Error] API 返回缺少 choices/message"
+        last_status = None
+        last_body = ""
+
+        for attempt in range(1, max_attempts + 1):
+            try:
+                async with aiohttp.ClientSession(timeout=timeout) as session:
+                    async with session.post(url, headers=headers, json=payload) as resp:
+                        last_status = resp.status
+                        last_body = await resp.text()
+
+                        if resp.status in (429,) or 500 <= resp.status <= 599:
+                            logger.warning(
+                                f"OpenAI API transient error: status={resp.status} attempt={attempt}/{max_attempts} body={last_body[:200]}"
+                            )
+                            if attempt < max_attempts:
+                                await asyncio.sleep(base_sleep * (2 ** (attempt - 1)))
+                                continue
+
+                        if resp.status >= 400:
+                            logger.error(f"OpenAI API error: status={resp.status} body={last_body[:500]}")
+                            if resp.status == 401:
+                                return "[Error] 后端鉴权失败（401）"
+                            if resp.status == 429:
+                                return "[Error] 后端限流（429），请稍后再试"
+                            return f"[Error] API 调用失败（HTTP {resp.status}）"
+
+                        try:
+                            data = json.loads(last_body)
+                        except Exception:
+                            logger.error(f"OpenAI API invalid JSON: {last_body[:500]}")
+                            return "[Error] API 返回格式异常"
+
+                        try:
+                            return (data["choices"][0]["message"]["content"] or "").strip()
+                        except Exception:
+                            logger.error(f"OpenAI API unexpected response: {str(data)[:500]}")
+                            return "[Error] API 返回缺少 choices/message"
+
+            except aiohttp.ClientConnectorError as e:
+                logger.warning(f"OpenAI API connect error attempt={attempt}/{max_attempts}: {e}")
+            except asyncio.TimeoutError as e:
+                logger.warning(f"OpenAI API timeout attempt={attempt}/{max_attempts}: {e}")
+            except Exception as e:
+                logger.warning(f"OpenAI API unknown error attempt={attempt}/{max_attempts}: {type(e).__name__}: {e}")
+
+            if attempt < max_attempts:
+                await asyncio.sleep(base_sleep * (2 ** (attempt - 1)))
+                continue
+
+        # final fallback
+        if last_status is not None:
+            return f"[Error] API 调用失败（HTTP {last_status}）"
+        return "[Error] 无法连接到后端 API"
     async def generate_content(self, model: str, prompt: str, task_type: str = "chat", auto_select: bool = True, history=None, has_media: bool = False):
         """Gemini-like interface used by existing plugins.
 

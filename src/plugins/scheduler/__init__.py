@@ -122,8 +122,6 @@ async def handle_weather(event: Union[GroupMessageEvent, PrivateMessageEvent], a
         await send_message_smart(bot, w, event, threshold)
     except Exception:
         await weather_cmd.finish(w)
-    
-    await weather_cmd.finish()
 
 async def send_daily_weather():
     logger.info("Sending daily weather...")
@@ -133,7 +131,10 @@ async def send_daily_weather():
     # Load target groups
     target_groups = json.loads(os.getenv("TARGET_GROUPS", "[]"))
     
-    bot = get_bot()
+    try:
+        bot = get_bot()
+    except Exception:
+        return
     for group_id in target_groups:
         try:
             # Check length for smart forwarding

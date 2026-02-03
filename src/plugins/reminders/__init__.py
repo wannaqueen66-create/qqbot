@@ -124,7 +124,11 @@ async def handle_remind(event: Union[GroupMessageEvent, PrivateMessageEvent], ar
 async def check_reminders():
     now = datetime.now().strftime("%H:%M")
     data = load_reminders()
-    bot = get_bot()
+    try:
+        bot = get_bot()
+    except Exception:
+        # bot not connected yet; skip silently
+        return
     
     for target_id, info in data.items():
         target_type = info["type"]

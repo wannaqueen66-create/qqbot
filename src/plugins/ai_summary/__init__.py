@@ -67,7 +67,7 @@ async def handle_manual_summary(event: GroupMessageEvent):
         await send_message_smart(bot, msg, event, threshold)
     except Exception:
         await manual_summary_cmd.send(msg)
-        
+
     await manual_summary_cmd.finish()
 
 # Message Recorder
@@ -110,7 +110,10 @@ async def push_summary(period_name):
     target_groups = json.loads(os.getenv("TARGET_GROUPS", "[]"))
     target_groups = [int(gid) for gid in target_groups]
     
-    bot = get_bot()
+    try:
+        bot = get_bot()
+    except Exception:
+        return
     from src.utils.database import db
     
     # Iterate over target groups

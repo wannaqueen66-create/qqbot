@@ -275,7 +275,7 @@ async def handle_chat(event: Union[GroupMessageEvent, PrivateMessageEvent]):
                    f"context: {'YES' if system_context else 'NO'} | "
                    f"media: {len(uploaded_files)}")
         
-        # 调用 Gemini API
+        # 调用 OpenAI-compatible API
         try:
             if uploaded_files:
                 # 多模态调用
@@ -313,7 +313,7 @@ async def handle_chat(event: Union[GroupMessageEvent, PrivateMessageEvent]):
                     history=full_history
                 )
         except Exception as e:
-            logger.error(f"Gemini API error: {e}")
+            logger.error(f"LLM API error: {e}")
             reply = "抱歉，处理您的消息时出现错误。"
         
         # 记录配额使用（成功调用后）
