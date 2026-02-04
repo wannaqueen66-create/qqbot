@@ -18,6 +18,7 @@ stats_cmd = on_command("memory", aliases={"记忆统计"}, priority=5)
 @stats_cmd.handle()
 async def handle_stats(event: Union[GroupMessageEvent, PrivateMessageEvent]):
     from src.utils.conversation_memory import conversation_memory
+    from src.utils.database import db
     
     stats = conversation_memory.get_stats()
     msg = (
@@ -40,6 +41,14 @@ async def handle_clear(event: Union[GroupMessageEvent, PrivateMessageEvent]):
         user_id = f"user_{event.user_id}"
     
     conversation_memory.clear_user(user_id)
+
+    # Also clear this user's rows from group_context in current group
+    if isinstance(event, GroupMessageEvent):
+        try:
+            db.clear_group_context_for_user(str(event.group_id), str(event.user_id))
+        except Exception:
+            pass
+
     await clear_cmd.finish("✅ 记忆已清空，我们可以开始新的对话了！")
 
 @chat.handle()
