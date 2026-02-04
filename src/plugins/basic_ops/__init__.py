@@ -42,6 +42,7 @@ async def handle_help(event: Union[GroupMessageEvent, PrivateMessageEvent]):
 
 管理员：
   /status - 查看运行/路由配置（仅管理员私聊）
+  /aclear <QQ号> [群号] - 清空指定用户个人记忆（管理员）
 ------------------------
 💡 提示：指令支持中英文别名
 """
@@ -57,3 +58,5 @@ async def handle_help(event: Union[GroupMessageEvent, PrivateMessageEvent]):
         await help_cmd.send(help_text)
         
     await help_cmd.finish()
+
+# admin clear: /aclear <qq> [group_id]
