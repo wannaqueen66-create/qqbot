@@ -123,8 +123,8 @@ Optional (recommended defaults):
 
 ```ini
 # Intelligent routing
-MODEL_CHAT_SHORT=gemini-3-flash
-MODEL_CHAT_LONG=gemini-3-pro-high
+MODEL_CHAT_SHORT=gemini-2.5-flash
+MODEL_CHAT_LONG=gemini-2.5-pro
 MODEL_SUMMARY=gemini-3-pro-high
 MODEL_THINKING=gemini-3-pro-high
 MODEL_IMAGE=gemini-3-pro-image
@@ -169,7 +169,7 @@ Optional: Two-stage smart router (adds one cheap call per request):
 
 ```ini
 ENABLE_SMART_ROUTER=false
-ROUTER_MODEL=gemini-3-flash
+ROUTER_MODEL=gemini-2.5-flash-lite
 ROUTER_MAX_INPUT_CHARS=2500
 ROUTER_MAX_HISTORY_MESSAGES=6
 ```
@@ -349,8 +349,8 @@ OPENAI_MODEL=auto
 可选（推荐）：
 
 ```ini
-MODEL_CHAT_SHORT=gemini-3-flash
-MODEL_CHAT_LONG=gemini-3-pro-high
+MODEL_CHAT_SHORT=gemini-2.5-flash
+MODEL_CHAT_LONG=gemini-2.5-pro
 MODEL_SUMMARY=gemini-3-pro-high
 MODEL_IMAGE=gemini-3-pro-image
 
@@ -387,7 +387,7 @@ TARGET_GROUPS=[]
 
 ```ini
 ENABLE_SMART_ROUTER=false
-ROUTER_MODEL=gemini-3-flash
+ROUTER_MODEL=gemini-2.5-flash-lite
 ROUTER_MAX_INPUT_CHARS=2500
 ROUTER_MAX_HISTORY_MESSAGES=6
 ```
