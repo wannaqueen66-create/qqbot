@@ -153,9 +153,14 @@ async def send_message_smart(
     else:
         # 消息超过阈值，使用合并转发
         logger.info(f"Message length {message_length} > threshold {threshold}, using forward message")
-        # 合并转发：默认不切片，整个内容作为一个 node 发送
-        # （避免代码/长输出被拆成多段）
-        nodes = create_forward_nodes([message], bot_uin, bot_name)
+        # 合并转发：默认不切片，整个内容作为一个 node 发送（避免代码/长输出被拆成多段）
+        # 但如果超过平台单个 node 的硬限制，则再按长度切成多个 node
+        forward_node_max_len = int(os.getenv("FORWARD_NODE_MAX_LEN", "3000"))
+        if message_length <= forward_node_max_len:
+            nodes = create_forward_nodes([message], bot_uin, bot_name)
+        else:
+            chunks = [message[i:i+forward_node_max_len] for i in range(0, message_length, forward_node_max_len)]
+            nodes = create_forward_nodes(chunks, bot_uin, bot_name)
         
         # 根据场景选择接口
         if isinstance(event, GroupMessageEvent):
