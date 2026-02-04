@@ -477,3 +477,16 @@ OPENAI_RETRY_BASE_SEC=0.6
 - 看日志：`docker-compose logs -f`
 - 重启：`docker-compose restart`
 - 停止：`docker-compose down`
+
+### Admin Panel (管理员面板)
+
+> ⚠️ **High risk**: if you expose this to the public internet, anyone with the token can read/clear memories.
+
+- URL: `http://<host>:8080/admin?token=<ADMIN_PANEL_TOKEN>`
+- Configure token in `.env`: `ADMIN_PANEL_TOKEN=...`
+- Recommended: bind to localhost + SSH tunnel, or protect with Cloudflare Access.
+
+Currently supported (v1):
+- View users and conversation memory (SQLite)
+- Clear any user memory (admin)
+- View bot/env status snapshot
