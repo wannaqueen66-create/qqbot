@@ -3,7 +3,7 @@
 一个基于 **NoneBot2 + OneBot V11 (NapCat)** 的 QQ 助手机器人。
 
 - **LLM 后端**：通过 **Antigravity-Manager 提供的 OpenAI-compatible /v1 API** 接入（不直连 OpenAI/Claude/Gemini 官方）。
-- **模型自动路由**：按任务/长度选择 `gemini-3-flash / gemini-3-pro-high / claude-sonnet-4.5-thinking / gemini-3-pro-image`。
+- **模型自动路由**：按任务/长度选择 `gemini-3-flash / gemini-3-pro-high / gemini-3-pro-image`。
 - **部署方式**：默认 `network_mode: host`（确保容器可访问宿主机 `127.0.0.1:8045`）。
 
 ---
@@ -58,7 +58,7 @@
   - Manual: `/summary` (group only)
   - Scheduled: 12:00 / 18:00 / 00:00 / 06:00 (Asia/Shanghai)
 - Status: `/status` (admin-only, private chat only)
-- Image: `/draw <prompt>` generates an image
+- Image: `/draw <prompt>` generates an image (rate-limited: 2 per 5h per user, admins bypass; can be disabled via `ENABLE_DRAW=false`)
 
 ### Architecture
 
@@ -125,7 +125,8 @@ Optional (recommended defaults):
 # Intelligent routing
 MODEL_CHAT_SHORT=gemini-3-flash
 MODEL_CHAT_LONG=gemini-3-pro-high
-MODEL_SUMMARY=claude-sonnet-4.5-thinking
+MODEL_SUMMARY=gemini-3-pro-high
+MODEL_THINKING=gemini-3-pro-high
 MODEL_IMAGE=gemini-3-pro-image
 
 # Admin-only commands
@@ -140,6 +141,7 @@ OPENAI_MAX_INPUT_CHARS=4000
 
 # Forwarding
 FORWARD_THRESHOLD=100
+FORWARD_NODE_MAX_LEN=3000
 BOT_NICKNAME=AI 助手
 
 # Image input limits
@@ -149,6 +151,11 @@ IMAGE_JPEG_QUALITY=85
 
 # Image generation
 OPENAI_IMAGE_SIZE=1024x1024
+
+# /draw feature toggle & rate limit
+ENABLE_DRAW=true
+DRAW_RATE_LIMIT_WINDOW_HOURS=5
+DRAW_RATE_LIMIT_MAX=2
 
 # Scheduled push targets
 TARGET_GROUPS=[]
@@ -190,16 +197,30 @@ STATS_FILE=data/chat_stats.json
 
 ### Forwarded messages (合并转发)
 
-Long replies will be sent as **forwarded messages** to reduce spam.
+Long replies will be sent as **forwarded messages** to reduce spam. By default, the forwarded message contains a single node (no internal splitting). It will only split into multiple nodes when exceeding `FORWARD_NODE_MAX_LEN`.
+
+Behavior:
+- Default: 1 forward node containing the **full content** (no paragraph splitting)
+- Only when exceeding platform limit, it will split into multiple nodes
+- For code-heavy replies (```...```), it prefers normal send (and will chunk only if too long)
 
 Config:
 
 ```ini
 FORWARD_THRESHOLD=100
+FORWARD_NODE_MAX_LEN=3000
 BOT_NICKNAME=AI 助手
+
+# Forward node hard limit (split only when > this)
+FORWARD_NODE_MAX_LEN=3000
+
+# Code output behavior
+DISABLE_FORWARD_FOR_CODE=true
+MAX_NORMAL_MESSAGE_LEN=1800
 ```
 
 If forward message fails (anti-spam), it will fall back to normal send.
+
 
 ### Retries & Error handling
 
@@ -258,7 +279,7 @@ OPENAI_RETRY_BASE_SEC=0.6
   - 手动：`/summary`（仅群聊）
   - 定时：12:00 / 18:00 / 00:00 / 06:00（上海时区）
 - 状态：`/status`（仅管理员私聊可用）
-- 图片生成：`/draw <描述>`
+- 图片生成：`/draw <描述>`（默认限流：每个 QQ 号 5 小时最多 2 次，管理员不受限；可用 `ENABLE_DRAW=false` 关闭）
 
 ### 架构
 
@@ -322,7 +343,7 @@ OPENAI_MODEL=auto
 ```ini
 MODEL_CHAT_SHORT=gemini-3-flash
 MODEL_CHAT_LONG=gemini-3-pro-high
-MODEL_SUMMARY=claude-sonnet-4.5-thinking
+MODEL_SUMMARY=gemini-3-pro-high
 MODEL_IMAGE=gemini-3-pro-image
 
 ADMIN_USER_IDS=[YOUR_QQ_ID]
@@ -334,12 +355,18 @@ OPENAI_MAX_HISTORY_MESSAGES=20
 OPENAI_MAX_INPUT_CHARS=4000
 
 FORWARD_THRESHOLD=100
+FORWARD_NODE_MAX_LEN=3000
 BOT_NICKNAME=AI 助手
 
 MAX_IMAGE_COUNT=3
 IMAGE_MAX_PX=1024
 IMAGE_JPEG_QUALITY=85
 OPENAI_IMAGE_SIZE=1024x1024
+
+# /draw 开关与限流
+ENABLE_DRAW=true
+DRAW_RATE_LIMIT_WINDOW_HOURS=5
+DRAW_RATE_LIMIT_MAX=2
 
 TARGET_GROUPS=[]
 ```
@@ -378,12 +405,22 @@ STATS_FILE=data/chat_stats.json
 
 ### 合并转发
 
-AI 长回复超过阈值会自动用“合并转发”发送，减少刷屏。
+AI 长回复超过阈值会自动用“合并转发”发送，减少刷屏。默认合并转发只发 1 个节点（不切片），仅当超过 `FORWARD_NODE_MAX_LEN` 才会按长度切成多个节点。
+
+行为：
+- 默认：合并转发里只放 **1 条 node（整段完整内容）**，不做段落切片
+- 只有当超过平台单 node 硬限制时，才会按长度拆成多条 node
+- 对包含代码块（```...```）的回复，优先尝试普通发送；过长才分片
 
 ```ini
 FORWARD_THRESHOLD=100
+FORWARD_NODE_MAX_LEN=3000
 BOT_NICKNAME=AI 助手
+FORWARD_NODE_MAX_LEN=3000
+DISABLE_FORWARD_FOR_CODE=true
+MAX_NORMAL_MESSAGE_LEN=1800
 ```
+
 
 ### 重试与错误处理
 
