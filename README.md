@@ -165,6 +165,15 @@ TARGET_GROUPS=[]
 
 When `OPENAI_MODEL=auto`:
 
+Optional: Two-stage smart router (adds one cheap call per request):
+
+```ini
+ENABLE_SMART_ROUTER=false
+ROUTER_MODEL=gemini-3-flash
+ROUTER_MAX_INPUT_CHARS=2500
+ROUTER_MAX_HISTORY_MESSAGES=6
+```
+
 - Keywords like "代码/报错/推理/证明" will prefer the thinking model (`MODEL_THINKING`).
 
 
@@ -373,6 +382,15 @@ TARGET_GROUPS=[]
 ### 智能模型路由
 
 当 `OPENAI_MODEL=auto` 时：
+
+可选：两段式智能路由（每次请求会额外调用一次便宜模型做分类）：
+
+```ini
+ENABLE_SMART_ROUTER=false
+ROUTER_MODEL=gemini-3-flash
+ROUTER_MAX_INPUT_CHARS=2500
+ROUTER_MAX_HISTORY_MESSAGES=6
+```
 
 - 若包含“代码/报错/推理/证明”等关键词，会优先使用 `MODEL_THINKING`。
 

@@ -3,7 +3,7 @@ import json
 import asyncio
 import aiohttp
 from nonebot.log import logger
-from src.utils.model_router import choose_model
+from src.utils.model_router import choose_model, _get_models_cfg, ModelChoice
 from typing import List, Dict, Optional, Any
 
 
@@ -184,6 +184,56 @@ class OpenAIClient:
             logger.error(f"OpenAI vision API unexpected response: {str(data)[:500]}")
             return "[Error] API 返回缺少 choices/message"
 
+    async def _chat_completions_raw(self, messages: List[Dict[str, Any]], model: str) -> str:
+        """Call /chat/completions with explicit model and minimal processing."""
+        # Convert content to OpenAI messages format (allow list content for vision; here we use text only)
+        msgs = []
+        for m in messages:
+            role = m.get("role")
+            content = m.get("content")
+            if role in ("system", "user", "assistant") and content is not None:
+                msgs.append({"role": role, "content": content})
+        return await self.chat_completions(msgs, model=model)
+
+    async def _smart_route(self, prompt: str, history_messages: List[Dict[str, str]]) -> Optional[Dict[str, Any]]:
+        """Two-stage router: use a cheap model to classify task into a small JSON."""
+        enable = os.getenv("ENABLE_SMART_ROUTER", "false").lower() in ("1", "true", "yes", "on")
+        if not enable:
+            return None
+
+        router_model = os.getenv("ROUTER_MODEL", os.getenv("MODEL_CHAT_SHORT", "gemini-3-flash"))
+        max_in = int(os.getenv("ROUTER_MAX_INPUT_CHARS", "2500"))
+        max_hist = int(os.getenv("ROUTER_MAX_HISTORY_MESSAGES", "6"))
+
+        p = (prompt or "").strip()
+        if len(p) > max_in:
+            p = p[-max_in:]
+
+        hist = history_messages[-max_hist:] if history_messages else []
+
+        sys = (
+            "You are a routing classifier for a chatbot. "
+            "Return ONLY a strict JSON object (no markdown). "
+            "Schema: {\"task\": one of [\"chat\",\"summary\",\"code\",\"debug\",\"translation\",\"rewrite\"], "
+            "\"complexity\": one of [\"low\",\"high\"], "
+            "\"need_long_context\": true/false}."
+        )
+
+        user = "Conversation (most recent first):\n" + "\n".join([f"{m['role']}: {m['content']}" for m in hist]) + "\n\nUser prompt:\n" + p
+
+        raw = await self._chat_completions_raw(
+            messages=[{"role": "system", "content": sys}, {"role": "user", "content": user}],
+            model=router_model,
+        )
+
+        try:
+            data = json.loads((raw or "").strip())
+            if isinstance(data, dict):
+                return data
+        except Exception:
+            return None
+        return None
+
     async def generate_content(self, model: str, prompt: str, task_type: str = "chat", auto_select: bool = True, history=None, has_media: bool = False):
         """Gemini-like interface used by existing plugins.
 
@@ -203,9 +253,42 @@ class OpenAIClient:
 
         chosen_model = model
         if not chosen_model or chosen_model == "auto":
-            choice = choose_model(prompt=prompt, task_type=task_type, has_media=has_media)
-            chosen_model = choice.model
-            logger.info(f"[model_router] choose model={chosen_model} reason={choice.reason}")
+            # two-stage smart router (optional)
+            routed = await self._smart_route(prompt=prompt, history_messages=messages[:-1])
+            if routed and isinstance(routed, dict):
+                cfg_choice = None
+                task = str(routed.get("task") or "").lower()
+                complexity = str(routed.get("complexity") or "").lower()
+                need_long = bool(routed.get("need_long_context"))
+
+                # Map classifier output -> model
+                if has_media:
+                    cfg_choice = choose_model(prompt=prompt, task_type=task_type, has_media=True)
+                elif task in ("summary",):
+                    cfg_choice = choose_model(prompt=prompt, task_type="summary", has_media=False)
+                elif task in ("code", "debug"):
+                    # prefer thinking model for code/debug when high complexity
+                    if complexity == "high" or need_long:
+                        cfg_choice = ModelChoice(_get_models_cfg().get("thinking") or _get_models_cfg().get("chat_long"), "smart_router code/debug high")
+                    else:
+                        cfg_choice = ModelChoice(_get_models_cfg().get("chat_long"), "smart_router code/debug")
+                elif task in ("translation", "rewrite"):
+                    cfg_choice = ModelChoice(_get_models_cfg().get("chat_long"), f"smart_router {task}")
+                else:
+                    # chat
+                    cfg_choice = ModelChoice(_get_models_cfg().get("chat_long") if (need_long or len((prompt or ''))>=150) else _get_models_cfg().get("chat_short"), "smart_router chat")
+
+                if cfg_choice and cfg_choice.model:
+                    chosen_model = cfg_choice.model
+                    logger.info(f"[smart_router] model={chosen_model} routed={routed}")
+                else:
+                    choice = choose_model(prompt=prompt, task_type=task_type, has_media=has_media)
+                    chosen_model = choice.model
+                    logger.info(f"[model_router] choose model={chosen_model} reason={choice.reason}")
+            else:
+                choice = choose_model(prompt=prompt, task_type=task_type, has_media=has_media)
+                chosen_model = choice.model
+                logger.info(f"[model_router] choose model={chosen_model} reason={choice.reason}")
 
         return await self.chat_completions(messages, model=chosen_model)
 
