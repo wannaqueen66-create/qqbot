@@ -99,6 +99,21 @@ class Database:
         """)
         
         conn.commit()
+        # Table 5: Draw usage (rate limit)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS draw_usage (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_draw_user_time
+            ON draw_usage (user_id, timestamp)
+        """)
+
+        conn.commit()
         logger.info(f"Database initialized: {self.db_file}")
     
     # ==================== Conversation Memory (Tier 1) ====================
@@ -423,6 +438,40 @@ class Database:
         
         return stats
     
+
+    # ==================== Draw Rate Limit ====================
+
+    def count_draw_usage(self, user_id: str, window_hours: int = 5) -> int:
+        """Count how many /draw a user used within last window_hours."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT COUNT(*) FROM draw_usage
+            WHERE user_id = ?
+            AND timestamp > datetime('now', ? || ' hours')
+            """,
+            (user_id, f'-{int(window_hours)}'),
+        )
+        return int(cursor.fetchone()[0] or 0)
+
+    def add_draw_usage(self, user_id: str):
+        """Record a /draw usage for user."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO draw_usage (user_id) VALUES (?)", (user_id,))
+        conn.commit()
+
+    def clean_old_draw_usage(self, keep_hours: int = 48):
+        """Clean old draw_usage records."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "DELETE FROM draw_usage WHERE timestamp < datetime('now', ? || ' hours')",
+            (f'-{int(keep_hours)}',),
+        )
+        conn.commit()
+
     def close(self):
         """Close database connection"""
         if hasattr(self._local, 'conn') and self._local.conn:
