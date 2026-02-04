@@ -153,21 +153,9 @@ async def send_message_smart(
     else:
         # 消息超过阈值，使用合并转发
         logger.info(f"Message length {message_length} > threshold {threshold}, using forward message")
-        
-        # 切分文本
-        paragraphs = split_text_into_paragraphs(message)
-        
-        # 如果切分后只有一个段落，直接发送
-        if len(paragraphs) <= 1:
-            logger.info("Only one paragraph after split, sending normally")
-            if isinstance(event, GroupMessageEvent):
-                await bot.send_group_msg(group_id=event.group_id, message=message)
-            else:
-                await bot.send_private_msg(user_id=event.user_id, message=message)
-            return
-        
-        # 创建转发节点
-        nodes = create_forward_nodes(paragraphs, bot_uin, bot_name)
+        # 合并转发：默认不切片，整个内容作为一个 node 发送
+        # （避免代码/长输出被拆成多段）
+        nodes = create_forward_nodes([message], bot_uin, bot_name)
         
         # 根据场景选择接口
         if isinstance(event, GroupMessageEvent):
