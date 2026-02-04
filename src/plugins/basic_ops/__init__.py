@@ -59,4 +59,3 @@ async def handle_help(event: Union[GroupMessageEvent, PrivateMessageEvent]):
         
     await help_cmd.finish()
 
-# admin clear: /aclear <qq> [group_id]
