@@ -58,6 +58,21 @@ async def handle_chat(event: Union[GroupMessageEvent, PrivateMessageEvent]):
         if not event.is_tome():
             return
 
+        # quick ping (avoid LLM): @bot 在吗/在不在/ping
+        raw_text = str(getattr(event, "message", ""))
+        # best-effort plain text
+        if raw_text:
+            try:
+                plain = raw_text
+                # remove at segment text if present
+                plain = plain.replace(f"[at:qq={getattr(event, 'self_id', '')}]", "")
+                plain = plain.replace("[at]", "")
+                plain = plain.strip()
+            except Exception:
+                plain = ""
+            if plain in ("在吗", "在不在", "ping", "Ping", "PING"):
+                await chat.finish("在呢")
+
         # Import utilities
         from src.utils.conversation_memory import conversation_memory
         from src.utils.openai_client import openai_client
