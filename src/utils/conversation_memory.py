@@ -19,9 +19,9 @@ class ConversationMemory:
         """Add a message to personal memory (Tier 1)"""
         db.add_conversation(user_id, role, content)
     
-    def add_group_context(self, group_id: str, user_name: str, content: str):
+    def add_group_context(self, group_id: str, user_id: str | None, user_name: str, content: str):
         """Add a message to shared group context (Tier 2)"""
-        db.add_group_context(group_id, user_name, content)
+        db.add_group_context(group_id, user_id, user_name, content)
     
     def add_group_summary(self, group_id: str, summary: str):
         """Add a long-term summary (Tier 3, from ai_summary)"""
@@ -40,7 +40,7 @@ class ConversationMemory:
         
         # Compress recent messages into a brief summary
         recent = context[-5:]  # Last 5 messages
-        context_lines = [f"{name}: {msg[:50]}..." for _, name, msg in recent]
+        context_lines = [f"{(name or uid)}: {msg[:50]}..." for _, uid, name, msg in recent]
         return "最近群聊上下文：\n" + "\n".join(context_lines)
     
     def get_group_summaries_text(self, group_id: str) -> Optional[str]:

@@ -5,6 +5,7 @@ from nonebot.adapters.onebot.v11 import Message
 
 from src.utils.auth import admin_user_ids
 from src.utils.conversation_memory import conversation_memory
+from src.utils.database import db
 
 # Admin-only: clear any user's memory
 # Usage:
@@ -57,5 +58,14 @@ async def handle_admin_clear(event: GroupMessageEvent | PrivateMessageEvent, arg
             user_key = f"user_{target_qq_int}"
             scope = "私聊"
 
+    # Clear Tier1 personal memory
     conversation_memory.clear_user(user_key)
+
+    # Also clear Tier2 group_context for this user (to avoid "memory revive")
+    if isinstance(event, GroupMessageEvent):
+        try:
+            db.clear_group_context_for_user(str(event.group_id), str(target_qq_int))
+        except Exception:
+            pass
+
     await admin_clear.finish(f"✅ 已清空 {scope} 内用户 {target_qq_int} 的个人记忆")

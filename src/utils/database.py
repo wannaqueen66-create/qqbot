@@ -68,10 +68,16 @@ class Database:
         """)
         
         # Table 3: Group context (Tier 2 - Shared context)
+        # Migration: add user_id column if missing
+        try:
+            cursor.execute("ALTER TABLE group_context ADD COLUMN user_id TEXT")
+        except Exception:
+            pass
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS group_context (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 group_id TEXT NOT NULL,
+                user_id TEXT,
                 user_name TEXT NOT NULL,
                 content TEXT NOT NULL,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -247,15 +253,15 @@ class Database:
     
     # ==================== Group Context (Tier 2) ====================
     
-    def add_group_context(self, group_id: str, user_name: str, content: str):
+    def add_group_context(self, group_id: str, user_id: str | None, user_name: str, content: str):
         """Add a message to shared group context"""
         conn = self._get_connection()
         cursor = conn.cursor()
         
         cursor.execute("""
-            INSERT INTO group_context (group_id, user_name, content)
-            VALUES (?, ?, ?)
-        """, (group_id, user_name, content))
+            INSERT INTO group_context (group_id, user_id, user_name, content)
+            VALUES (?, ?, ?, ?)
+        """, (group_id, user_id, user_name, content))
         
         conn.commit()
         
@@ -268,9 +274,9 @@ class Database:
         cursor = conn.cursor()
         
         cursor.execute("""
-            SELECT timestamp, user_name, content FROM group_context
+            SELECT timestamp, user_id, user_name, content FROM group_context
             WHERE group_id = ?
-            AND timestamp > datetime('now', '-3 hours')
+            AND timestamp > datetime('now', '-6 hours')
             ORDER BY timestamp DESC
             LIMIT ?
         """, (group_id, limit))
@@ -281,8 +287,9 @@ class Database:
         for row in reversed(rows):
             context.append((
                 datetime.fromisoformat(row['timestamp']),
-                row['user_name'],
-                row['content']
+                row.get('user_id') if hasattr(row,'keys') else row[1],
+                row['user_name'] if hasattr(row,'keys') else row[2],
+                row['content'] if hasattr(row,'keys') else row[3]
             ))
         
         return context
@@ -296,7 +303,7 @@ class Database:
         cursor.execute("""
             DELETE FROM group_context
             WHERE group_id = ?
-            AND timestamp < datetime('now', '-3 hours')
+            AND timestamp < datetime('now', '-6 hours')
         """, (group_id,))
         
         # Keep only last 10 messages
@@ -313,7 +320,18 @@ class Database:
         
         conn.commit()
     
-    # ==================== Group Summaries (Tier 3) ====================
+    
+    def clear_group_context_for_user(self, group_id: str, user_id: str):
+        """Remove group_context entries for a specific user in a group."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "DELETE FROM group_context WHERE group_id = ? AND user_id = ?",
+            (group_id, user_id),
+        )
+        conn.commit()
+
+# ==================== Group Summaries (Tier 3) ====================
     
     def add_group_summary(self, group_id: str, summary: str):
         """Add a long-term group summary"""
@@ -388,7 +406,7 @@ class Database:
         # Clean old group context (>3 hours)
         cursor.execute("""
             DELETE FROM group_context
-            WHERE timestamp < datetime('now', '-3 hours')
+            WHERE timestamp < datetime('now', '-6 hours')
         """)
         
         # Clean old group summaries (>2 days)

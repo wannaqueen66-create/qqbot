@@ -155,7 +155,7 @@ async def handle_chat(event: Union[GroupMessageEvent, PrivateMessageEvent]):
             # Add to group context (Tier 2)
             if parsed.text:
                 try:
-                    conversation_memory.add_group_context(group_id, user_name, parsed.text)
+                    conversation_memory.add_group_context(group_id, str(event.user_id), user_name, parsed.text)
                 except Exception as e:
                     logger.error(f"Failed to add group context: {e}")
         else:
