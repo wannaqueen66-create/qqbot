@@ -202,21 +202,20 @@ Long replies will be sent as **forwarded messages** to reduce spam. By default, 
 Behavior:
 - Default: 1 forward node containing the **full content** (no paragraph splitting)
 - Only when exceeding platform limit, it will split into multiple nodes
-- For code-heavy replies (```...```), it prefers normal send (and will chunk only if too long)
+- Forward threshold is a hard rule: if reply length > FORWARD_THRESHOLD, it will use forward message
+- Forward message defaults to a single node (no split); only splits when exceeding FORWARD_NODE_MAX_LEN
 
 Config:
 
 ```ini
 FORWARD_THRESHOLD=100
-FORWARD_NODE_MAX_LEN=3000
 BOT_NICKNAME=AI 助手
-
-# Forward node hard limit (split only when > this)
 FORWARD_NODE_MAX_LEN=3000
 
-# Code output behavior
-DISABLE_FORWARD_FOR_CODE=true
+# (Optional) If you want code blocks to be sent as normal messages, it only applies when length <= FORWARD_THRESHOLD
+DISABLE_FORWARD_FOR_CODE=false
 MAX_NORMAL_MESSAGE_LEN=1800
+```
 ```
 
 If forward message fails (anti-spam), it will fall back to normal send.
@@ -410,15 +409,18 @@ AI 长回复超过阈值会自动用“合并转发”发送，减少刷屏。�
 行为：
 - 默认：合并转发里只放 **1 条 node（整段完整内容）**，不做段落切片
 - 只有当超过平台单 node 硬限制时，才会按长度拆成多条 node
-- 对包含代码块（```...```）的回复，优先尝试普通发送；过长才分片
+- 转发阈值是硬规则：回复长度超过 FORWARD_THRESHOLD 一律使用合并转发
+- 合并转发默认只发 1 条 node（不切片），仅当超过 FORWARD_NODE_MAX_LEN 才会拆分
 
 ```ini
 FORWARD_THRESHOLD=100
-FORWARD_NODE_MAX_LEN=3000
 BOT_NICKNAME=AI 助手
 FORWARD_NODE_MAX_LEN=3000
-DISABLE_FORWARD_FOR_CODE=true
+
+# （可选）代码块走普通消息仅在不超过阈值时生效
+DISABLE_FORWARD_FOR_CODE=false
 MAX_NORMAL_MESSAGE_LEN=1800
+```
 ```
 
 
