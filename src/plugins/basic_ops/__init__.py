@@ -42,6 +42,7 @@ async def handle_help(event: Union[GroupMessageEvent, PrivateMessageEvent]):
 
 管理员：
   /status - 查看运行/路由配置（仅管理员私聊）
+  /task - 管理定时任务（管理员）
   /aclear <QQ号> [群号] - 清空指定用户个人记忆（管理员）
   /gclear [群号] - 清空某群短期上下文（管理员）
   /aclear <QQ号> [群号] - 清空指定用户个人记忆（管理员）
