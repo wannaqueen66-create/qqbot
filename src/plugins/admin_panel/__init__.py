@@ -381,8 +381,16 @@ else:
   }
 
   // init
-  document.getElementById('token').value = localStorage.getItem('ADMIN_TOKEN') || '';
+  const params = new URLSearchParams(location.search);
+  const urlToken = params.get('token');
+  if(urlToken){
+    document.getElementById('token').value = urlToken;
+    localStorage.setItem('ADMIN_TOKEN', urlToken);
+  } else {
+    document.getElementById('token').value = localStorage.getItem('ADMIN_TOKEN') || '';
+  }
   loadStatus();
+  loadUsers('');
 </script>
 </body>
 </html>"""
