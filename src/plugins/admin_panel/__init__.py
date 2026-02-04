@@ -146,7 +146,9 @@ def _get_bot_or_none():
         return None
 
 
-def _extract_identity(meta: dict) -> tuple[int | None, int | None]:
+def _extract_identity(meta: dict):
+    return (meta.get("kind"), meta.get("group_id"), meta.get("user_id"))
+
     return (meta.get("user_id"), meta.get("group_id"))
 
 
