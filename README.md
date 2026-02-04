@@ -187,6 +187,11 @@ ROUTER_MAX_HISTORY_MESSAGES=6
 ### Admin-only commands
 
 - `/status` is **admin-only** and **private-chat only**.
+- `/aclear <user_key>` clear any user's memory (admin-only, private-chat only).
+  - `user_key` format: `user_<QQ>` or `group_<GROUP>_user_<QQ>`
+
+
+- `/status` is **admin-only** and **private-chat only**.
 - Configure admins via `ADMIN_USER_IDS` (JSON list or comma-separated). Default: [ADMIN_QQ_ID].
 
 ### Chat Stats (水群榜)
