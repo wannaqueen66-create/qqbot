@@ -9,6 +9,16 @@ import os
 import re
 
 
+_CODE_FENCE = re.compile(r"```[\s\S]*?```", re.MULTILINE)
+
+
+def _is_code_heavy(text: str) -> bool:
+    if not text:
+        return False
+    # treat fenced code blocks as code-heavy
+    return bool(_CODE_FENCE.search(text))
+
+
 def split_text_into_paragraphs(text: str, max_paragraph_length: int = 500) -> List[str]:
     """
     将长文本切分为多个段落
@@ -110,7 +120,28 @@ async def send_message_smart(
     # 获取 Bot 配置
     bot_uin = str(bot.self_id)
     bot_name = os.getenv("BOT_NICKNAME", "AI 助手")
-    
+    # Code-aware behavior: do not use forward messages for code blocks by default
+    disable_forward_for_code = os.getenv("DISABLE_FORWARD_FOR_CODE", "true").lower() in ("1","true","yes","on")
+    max_normal_len = int(os.getenv("MAX_NORMAL_MESSAGE_LEN", "1800"))
+    if disable_forward_for_code and _is_code_heavy(message):
+        logger.info(f"Code-heavy message detected (len={message_length}), sending as normal message")
+        # If too long for a single QQ message, fall back to chunked normal sends
+        if message_length <= max_normal_len:
+            if isinstance(event, GroupMessageEvent):
+                await bot.send_group_msg(group_id=event.group_id, message=message)
+            else:
+                await bot.send_private_msg(user_id=event.user_id, message=message)
+            return
+        # chunked send
+        chunks = [message[i:i+max_normal_len] for i in range(0, message_length, max_normal_len)]
+        for idx, ch in enumerate(chunks):
+            prefix = "" if len(chunks) == 1 else f"({idx+1}/{len(chunks)})\n"
+            if isinstance(event, GroupMessageEvent):
+                await bot.send_group_msg(group_id=event.group_id, message=prefix + ch)
+            else:
+                await bot.send_private_msg(user_id=event.user_id, message=prefix + ch)
+        return
+
     # 判断是否需要合并转发
     if message_length <= threshold:
         # 普通发送
