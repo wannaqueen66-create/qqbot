@@ -232,7 +232,17 @@ else:
   }
 
   function esc(s){
-    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+    s = String(s ?? "");
+    return s.replace(/[&<>"']/g, function(c){
+      switch(c){
+        case "&": return "&amp;";
+        case "<": return "&lt;";
+        case ">": return "&gt;";
+        case '"': return "&quot;";
+        case "'": return "&#39;";
+        default: return c;
+      }
+    });
   }
 
   function statusChip(label, value){
