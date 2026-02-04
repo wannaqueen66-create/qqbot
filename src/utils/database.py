@@ -9,7 +9,7 @@ import threading
 DB_FILE = "data/qqbot_data.db"  # Store in data directory for persistence
 MAX_MESSAGE_AGE_DAYS = 14  # Keep group messages for 14 days
 MAX_CONVERSATION_AGE_DAYS = 7  # Keep conversations for 7 days
-MAX_GROUP_CONTEXT_HOURS = 3    # Keep group context for 3 hours
+MAX_GROUP_CONTEXT_HOURS = 6    # Keep group context for 3 hours
 MAX_SUMMARY_AGE_DAYS = 2       # Keep summaries for 2 days
 
 class Database:
