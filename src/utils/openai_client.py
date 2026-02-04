@@ -59,6 +59,12 @@ class OpenAIClient:
 
         logger.info(f"OpenAIClient init: base_url={self.base_url!r}, model={self.model!r}, timeout={self.timeout_sec}s")
 
+        # Global concurrency limiter to protect backend/accounts
+        max_conc = int(os.getenv("MAX_CONCURRENT_REQUESTS", "4"))
+        self._sem = asyncio.Semaphore(max_conc if max_conc > 0 else 1)
+        self._acquire_timeout = float(os.getenv("CONCURRENCY_ACQUIRE_TIMEOUT_SEC", "0.2"))
+
+
     async def chat_completions(self, messages: List[Dict[str, str]], model: Optional[str] = None) -> str:
         if not self.base_url:
             return "[Error] OPENAI_BASE_URL 未配置（例如：https://anti.freeapp.tech/v1）"
@@ -87,7 +93,14 @@ class OpenAIClient:
         last_body = ""
 
         for attempt in range(1, max_attempts + 1):
+            acquired = False
             try:
+                try:
+                    await asyncio.wait_for(self._sem.acquire(), timeout=self._acquire_timeout)
+                    acquired = True
+                except asyncio.TimeoutError:
+                    return "[Error] 系统繁忙（并发过高），请稍后再试"
+
                 async with aiohttp.ClientSession(timeout=timeout) as session:
                     async with session.post(url, headers=headers, json=payload) as resp:
                         last_status = resp.status
@@ -127,6 +140,12 @@ class OpenAIClient:
                 logger.warning(f"OpenAI API timeout attempt={attempt}/{max_attempts}: {e}")
             except Exception as e:
                 logger.warning(f"OpenAI API unknown error attempt={attempt}/{max_attempts}: {type(e).__name__}: {e}")
+            finally:
+                if acquired:
+                    try:
+                        self._sem.release()
+                    except Exception:
+                        pass
 
             if attempt < max_attempts:
                 await asyncio.sleep(base_sleep * (2 ** (attempt - 1)))
@@ -166,17 +185,27 @@ class OpenAIClient:
         }
 
         timeout = aiohttp.ClientTimeout(total=self.timeout_sec)
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.post(url, headers=headers, json=payload) as resp:
-                body = await resp.text()
-                if resp.status >= 400:
-                    logger.error(f"OpenAI vision API error: status={resp.status} body={body[:500]}")
-                    if resp.status == 401:
-                        return "[Error] 后端鉴权失败（401）"
-                    if resp.status == 429:
-                        return "[Error] 后端限流（429），请稍后再试"
-                    return f"[Error] API 调用失败（HTTP {resp.status}）"
-                data = json.loads(body)
+        try:
+            await asyncio.wait_for(self._sem.acquire(), timeout=self._acquire_timeout)
+        except asyncio.TimeoutError:
+            return "[Error] 系统繁忙（并发过高），请稍后再试"
+        try:
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.post(url, headers=headers, json=payload) as resp:
+                    body = await resp.text()
+                    if resp.status >= 400:
+                        logger.error(f"OpenAI vision API error: status={resp.status} body={body[:500]}")
+                        if resp.status == 401:
+                            return "[Error] 后端鉴权失败（401）"
+                        if resp.status == 429:
+                            return "[Error] 后端限流（429），请稍后再试"
+                        return f"[Error] API 调用失败（HTTP {resp.status}）"
+                    data = json.loads(body)
+        finally:
+            try:
+                self._sem.release()
+            except Exception:
+                pass
 
         try:
             return (data["choices"][0]["message"]["content"] or "").strip()
@@ -316,13 +345,23 @@ class OpenAIClient:
             'Content-Type': 'application/json',
         }
         timeout = aiohttp.ClientTimeout(total=self.timeout_sec)
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.post(url, headers=headers, json=payload) as resp:
-                body = await resp.text()
-                if resp.status >= 400:
-                    logger.error(f"OpenAI image API error: status={resp.status} body={body[:500]}")
-                    raise RuntimeError(f"image api failed: HTTP {resp.status}")
-                data = json.loads(body)
+        try:
+            await asyncio.wait_for(self._sem.acquire(), timeout=self._acquire_timeout)
+        except asyncio.TimeoutError:
+            raise RuntimeError('busy: concurrency')
+        try:
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.post(url, headers=headers, json=payload) as resp:
+                    body = await resp.text()
+                    if resp.status >= 400:
+                        logger.error(f"OpenAI image API error: status={resp.status} body={body[:500]}")
+                        raise RuntimeError(f"image api failed: HTTP {resp.status}")
+                    data = json.loads(body)
+        finally:
+            try:
+                self._sem.release()
+            except Exception:
+                pass
         try:
             item = (data.get('data') or [])[0]
             if 'b64_json' in item and item['b64_json']:
